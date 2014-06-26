@@ -32,8 +32,8 @@ N_stimuli = int(T_simulation / dt_stimuli)  # Number of stimuli points
 # visual space resolution and size  
 dx = 0.1
 dy = 0.1
-lx = 6.0  # In degrees
-ly = 6.0  # In degrees
+lx = 6.8  # In degrees
+ly = 6.8  # In degrees
 
 # center-surround parameters 
 factor = 1  # Controls the overall size of the center-surround pattern
@@ -64,12 +64,11 @@ working_indexes, kernel_times = create_extra_indexes(kernel_size, Nt_simulation)
 firing_rate = np.zeros(Nt_simulation)
 
 # Create the stimuli 
-# stimuli = ternary_noise(N_stimuli, int(lx /dx), int(ly/dt))
 stimuli = sine_grating(dx, lx, dy, ly, A, K, Phi, Theta, dt_stimuli, N_stimuli, w)
 
 # Chose the particular cell 
-xc = 0
-yc = 0 
+xc = 1.5
+yc = 1.5
 
 # Create the kernel 
 kernel = create_kernel(dx, lx, dy, ly, sigma_surround, sigma_center,
@@ -95,4 +94,5 @@ spike_times_thin -= remove_start
 y = np.ones_like(spike_times_thin) * np.max(firing_rate) * 0.5
 plt.plot(spike_times_thin, y, '*', label='spikes')
 plt.legend()
+plt.ylim([0,60])
 plt.show()

@@ -12,19 +12,18 @@ from kernel_functions import create_kernel
 from analysis_functions import produce_spikes, convolution
 from plot_functions import visualize_firing_rate
 
-
 ## Time parameters
 
 # Time scales
 dt = 0.25  # milliseconds
 dt = 1
-dt_kernel = 5.0  # ms
-dt_stimuli = 5.0  # ms
+dt_kernel = 1.0  # ms
+dt_stimuli = 1.0  # ms
 kernel_duration = 150  # ms
 kernel_size = int(kernel_duration / dt_kernel)
 
 # Simulation time duration
-T_simulation = 5 * 10 ** 2.0  # ms
+T_simulation = 10 * 10 ** 2.0  # ms
 remove_start = int(kernel_size * dt_kernel)
 T_simulation += remove_start  # Add the size of the kernel
 Nt_simulation = int(T_simulation / dt)  # Number of simulation points
@@ -70,9 +69,10 @@ firing_rate = np.zeros(Nt_simulation)
 stimuli = sine_grating(dx, lx, dy, ly, A, K, Phi, Theta, dt_stimuli, N_stimuli, w)
 
 # Create the cell array
-Ncells = 15
-lx_cells = 3.0
-ly_cells = 3.0 
+Ncells = 30
+lx_cells = 5.0
+ly_cells = 5.0
+on_off_cells = 1 # 1 and -1 for on and off cells respectively 
 
 x_values = np.linspace(-lx_cells/2, lx_cells/2, Ncells, endpoint=True)
 y_values = np.linspace(-ly_cells/2, ly_cells/2, Ncells, endpoint=True)
@@ -99,7 +99,7 @@ for x in x_values:
 
         # Create the kernel
         kernel = create_kernel(dx, lx, dy, ly, sigma_surround, sigma_center,
-                               dt_kernel, kernel_size, inverse=1, x_tra=xc, y_tra=yc)
+                               dt_kernel, kernel_size, inverse=on_off_cells, x_tra=xc, y_tra=yc)
 
         # Calculate the firing rate
         for index in signal_indexes:
@@ -108,11 +108,10 @@ for x in x_values:
         firing_rate += 10  # Add background noise
         # Rectify the firing rate
         firing_rate[ firing_rate < 0] = 0
-        #
-        visualize_firing_rate(firing_rate / np.max(firing_rate), dt, T_simulation, label='Firing rate')
-
+    
         # Produce spikes with the signal
         spike_times_thin = produce_spikes(firing_rate, dt, T_simulation, remove_start)
+        spike_times_thin -= remove_start # Translate the spikes to the origin  
         spike_train.append(spike_times_thin)
 
 
@@ -128,5 +127,5 @@ f.close()
 
 # Save positions
 f = open(output_filename2, "wb")
-cPickle.dump(spike_train, f, protocol=2)
+cPickle.dump(positions, f, protocol=2)
 f.close()
