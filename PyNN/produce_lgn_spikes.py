@@ -34,8 +34,8 @@ N_stimuli = int(T_simulation / dt_stimuli)  # Number of stimuli points
 # visual space resolution and size
 dx = 0.1
 dy = 0.1
-lx = 6.0  # In degrees
-ly = 6.0  # In degrees
+lx = 6.8  # In degrees
+ly = 6.8  # In degrees
 
 # center-surround parameters
 factor = 1  # Controls the overall size of the center-surround pattern
@@ -70,11 +70,16 @@ firing_rate = np.zeros(Nt_simulation)
 stimuli = sine_grating(dx, lx, dy, ly, A, K, Phi, Theta, dt_stimuli, N_stimuli, w)
 
 # Create the cell array
-x_values = np.arange(-(lx-1)/2, (lx-1)/2, dx)
-y_values = np.arange(-(ly-1)/2, (ly-1)/2, dy)
+Ncells = 15
+lx_cells = 3.0
+ly_cells = 3.0 
+
+x_values = np.linspace(-lx_cells/2, lx_cells/2, Ncells, endpoint=True)
+y_values = np.linspace(-ly_cells/2, ly_cells/2, Ncells, endpoint=True)
 
 spike_train = []
 positions =[]
+counter = 0
 
 for x in x_values:
     for y in y_values:
@@ -83,6 +88,8 @@ for x in x_values:
         print 'Order of creation in the grid'
         print 'x=', x
         print 'y=', y
+        print 'Steps to finish', Ncells * Ncells - counter
+        counter += 1 
 
         xc = x
         yc = y

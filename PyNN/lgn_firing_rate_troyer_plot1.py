@@ -15,7 +15,7 @@ from plot_functions import visualize_firing_rate
 ## Time parameters
 
 # Time scales   
-dt = 0.25  # sm
+dt = 0.25  # ms
 dt = 1.0 
 dt_kernel = 1.0  # ms
 dt_stimuli = 1.0  # ms

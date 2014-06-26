@@ -16,13 +16,13 @@ from plot_functions import visualize_firing_rate
 # Time scales   
 dt = 0.25  # milliseconds
 dt = 1
-dt_kernel = 5.0  # ms
-dt_stimuli = 5.0  # ms
+dt_kernel = 1.0  # ms
+dt_stimuli = 1.0  # ms
 kernel_duration = 150  # ms
 kernel_size = int(kernel_duration / dt_kernel)
 
 # Simulation time duration
-T_simulation = 10 * 10 ** 2.0  # ms
+T_simulation = 2 * 10 ** 3.0  # ms
 remove_start = int(kernel_size * dt_kernel)
 T_simulation += remove_start  # Add the size of the kernel
 Nt_simulation = int(T_simulation / dt)  # Number of simulation points 
@@ -52,7 +52,7 @@ A = contrast * max_contrast
 w = 3  # Hz
 
 # Set the random set for reproducibility
-seed = 1055
+seed = 31255433
 np.random.seed(seed)
 
 # Create indexes 
@@ -85,12 +85,14 @@ firing_rate += 10 # Add background noise
 firing_rate[ firing_rate < 0] = 0
 
 remove_start = int(kernel_size *dt_kernel)
-#visualize_firing_rate(firing_rate[signal_indexes]/ np.max(firing_rate), dt, T_simulation - remove_start, label='Firing rate')
-visualize_firing_rate(firing_rate / np.max(firing_rate), dt, T_simulation, label='Firing rate')
+visualize_firing_rate(firing_rate[signal_indexes], dt, T_simulation - remove_start, label='Firing rate')
+#visualize_firing_rate(firing_rate / np.max(firing_rate), dt, T_simulation, label='Firing rate')
 
 # Produce spikes with the signal
 spike_times_thin = produce_spikes(firing_rate, dt, T_simulation, remove_start)
+spike_times_thin -= remove_start 
  
-y = np.ones_like(spike_times_thin) * 0.5
-plt.plot(spike_times_thin, y, '*', label='rmax')
+y = np.ones_like(spike_times_thin) * np.max(firing_rate) * 0.5
+plt.plot(spike_times_thin, y, '*', label='spikes')
+plt.legend()
 plt.show()
