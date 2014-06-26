@@ -28,7 +28,7 @@ def spike_times(i):
 
 
 # Spatial structure
-lgn_structure = space.Grid2D(aspect_ratio=1, x0=-1.0, y0=-1.0, dx=0.4, dy=0.4, z=0)
+lgn_structure = space.Grid2D(aspect_ratio=1, x0=-6.0, y0=-6.0, dx=0.1, dy=0.1, z=0)
 # Neuron Model
 model = simulator.SpikeSourceArray(spike_times=spike_times)
 

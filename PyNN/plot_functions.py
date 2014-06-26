@@ -3,6 +3,19 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
 
+def visualize_firing_rate(firing_rate, dt, T_simulation, label=None):
+    """
+    Plot the firing rate 
+    """
+    
+    t = np.arange(0, T_simulation, dt)
+    plt.plot(t, firing_rate, label=label)
+    plt.xlabel('Time (ms)')
+    plt.ylabel('Firing rate (Hz)')
+    plt.legend()
+    
+
+
 def plot_mutliplot_bilinear(N,ims, colorbar=True, symmetric=0):
     """
     Plots a series of 2D images as imshow functions. 

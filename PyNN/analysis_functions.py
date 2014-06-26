@@ -45,32 +45,42 @@ def convolution(index, kernel_times, delay_indexes, stimuli_indexes, kernel, sti
     # Calculate proper delays in the image indexes 
     delay = stimuli_indexes[index - delay_indexes] 
     # Do the calculation    
-    result = np.sum(kernel[kernel_times,...] * stimuli[delay,...])
+    result = np.sum(kernel * stimuli[delay,...])
     
     return result
 
-def produce_spikes(firing_rate, dt, T_simulation):
+
+def produce_spikes(firing_rate, dt, T_simulation, remove_start):
     """
-    Produces spikes from a firing rate with the mechanism of thinning 
+    Takes as an input a firing rate dependent on time and outputs a spike train generated with a
+    non-homogeneous poisson process. In order to do so, uses the thinning method described in Dayan and Abbot 2001
+
+    Parameters
+    --------------------
+    firing_rate: The firing rate of a neuron
+    dt: the time resolution of the firing rate
+    T_simulation: The total time of the signal
+    remove_start: the firing rate comes with zeros at the beginning, this is the size of those zeros
     """
 
-    rmax = np.max(firing_rate) / 1000 # Transfors to Hz
-    firing_rate_size = firing_rate.size
-    
-    # Generate the spiking times 
-    x_exp = np.random.exponential(1.0 / rmax, size=firing_rate_size) #This does not to be so long 
-    spike_times =  np.cumsum(x_exp) # This is the actual spike_times 
-    spike_times  = spike_times[ spike_times <= T_simulation] # Take only the ones that are smaller than the simulation time 
-    
-    # Now we need to transform spike times in indexes of the firing_rate
-    spike_indexes = np.floor(spike_times / dt )
+    r_max = np.max(firing_rate)  # Transforms to Hz
+
+    # Generate the spiking times
+    x_exp = np.random.exponential(1000.0 / r_max, size=firing_rate.size) #This does not need to be so long
+    spike_times = np.cumsum(x_exp)  # This is the actual spike_times
+    take_out_big_times = spike_times < T_simulation # Indexes that correspond to times bigger than the simulation
+    take_out_small_times = remove_start < spike_times  # Indexes of the zero entries
+    # We take out the non meaningful spikes
+    spike_times = spike_times[take_out_big_times * take_out_small_times]
+
+    # Take the indexes of each spike
+    spike_indexes = np.floor(spike_times / dt)  # Maybe it is times this
     spike_indexes = spike_indexes.astype(int)
-    
-    # Finally we appliy the thinning process 
+
+    # Finally we apply the thinning process
     x = np.random.rand(spike_indexes.size)
-    ratio = firing_rate[spike_indexes] / ( 1000 * rmax)
-    index_to_keep = np.where( ratio  >=  x ) #Thin
-    spike_times_thin = spike_times[index_to_keep]
+    # If the ratio is bigger than a random number we keep the spike
+    ratio = firing_rate[spike_indexes] / r_max
+    spike_times = spike_times[ratio >= x]
 
-    return spike_times_thin
-
+    return spike_times

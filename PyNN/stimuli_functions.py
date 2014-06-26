@@ -15,6 +15,10 @@ def sine_grating(dx, Lx, dy, Ly, A, K, Phi, Theta, dt_stimuli, N_stimuli, w):
     Nx = int(Lx / dx)
     Ny = int(Ly / dy)
     
+    # Transform to appropriate units 
+    K = K * 2 * np.pi # Transforms K to cycles per degree
+    w = w / 1000.0 # Transforms w to kHz  
+    
     x = np.arange(-Lx/2, Lx/2, dx)
     y = np.arange(-Ly/2, Ly/2, dy)
     X, Y = np.meshgrid(x, y)

@@ -18,6 +18,7 @@ def gabor_kernel(lx, dx, ly, dy, sigma, gamma, phi, w, theta):
     theta: Rotates the whole pattern by the angle theta
     
     '''
+    
 
     x = np.arange(-lx/2, lx/2, dx)
     y = np.arange(-ly/2, ly/2, dy)
@@ -31,7 +32,7 @@ def gabor_kernel(lx, dx, ly, dy, sigma, gamma, phi, w, theta):
     exp_part = np.exp(-(X**2 + (gamma * Y)**2)/(2 * sigma**2))
     cos_part = np.cos(2 * np.pi * w * X + phi)
 
-    return  exp_part * cos_part
+    return exp_part * cos_part
 
 
 def spatial_kernel(lx, dx, ly, dy, sigma_center, sigma_surround, inverse=1, x_tra=0, y_tra=0):
@@ -86,13 +87,22 @@ def temporal_kernel(t):
     return p3
 
 
-def create_kernel(dx, lx, dy, ly, sigma_surround, sigma_center, dt_kernel, kernel_size, x_tra=0, y_tra=0):
+def create_kernel(dx, lx, dy, ly, sigma_surround, sigma_center, dt_kernel, kernel_size, inverse=1, x_tra=0, y_tra=0):
     """
-    Returns the kernel 
+    Returns the kernel
+
+    Note:
+    At the end we multiply the whole kernel by a scale factor. Is necessary to take into account that the bigger
+    the kernel_size the more terms will be used for the convolution calculation. It is necessary then to normalize
+    by the size. Furthermore, if dt_kernel is small then more terms will be include in the calculation, and taking
+    this into account we also multiply by dt_kernel
+
+    The bigger the number of kernel points (dx/ lx) or (dy/ ly) the more terms terms
+
     """
 
     # Call the spatial kernel
-    Z = spatial_kernel(lx, dx, ly, dy, sigma_center, sigma_surround, x_tra=x_tra, y_tra=y_tra)
+    Z = spatial_kernel(lx, dx, ly, dy, sigma_center, sigma_surround, inverse=inverse, x_tra=x_tra, y_tra=y_tra)
     # Call the temporal kernel
     t = np.arange(0, kernel_size * dt_kernel, dt_kernel)
     f_t = temporal_kernel(t)
@@ -101,6 +111,7 @@ def create_kernel(dx, lx, dy, ly, sigma_surround, sigma_center, dt_kernel, kerne
     kernel = np.zeros((kernel_size, int(lx/dx), int(ly/dy)))
 
     for k, ft in enumerate(f_t):
-        kernel[k,...] = ft * Z   
+        kernel[k,...] = ft * Z 
     
-    return kernel
+    
+    return kernel * (dt_kernel) *  ( (dx/lx) * (dy/ly) )
