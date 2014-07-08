@@ -45,7 +45,7 @@ sigma_surround = 1 * factor  # Corresponds to 1 degree
 K = 0.8  # Cycles per degree 
 Phi = 0 * np.pi
 Theta = 0 * np.pi
-max_contrast = 2.0 * 2
+max_contrast = 2.4 * 2
 contrast = 0.5  # Percentage
 A = contrast * max_contrast 
 # Temporal frequency of sine grating 
@@ -67,8 +67,8 @@ firing_rate = np.zeros(Nt_simulation)
 stimuli = sine_grating(dx, lx, dy, ly, A, K, Phi, Theta, dt_stimuli, N_stimuli, w)
 
 # Chose the particular cell 
-xc = 1.5
-yc = 1.5
+xc = 0
+yc = 0
 
 # Create the kernel 
 kernel = create_kernel(dx, lx, dy, ly, sigma_surround, sigma_center,

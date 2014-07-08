@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def gabor_probability(x, y, sigma, gamma, phi, w, theta):
+def gabor_probability(x, y, sigma, gamma, phi, w, theta, xc=0, yc=0):
     '''
     calculate the gabor function of x and y
     '''

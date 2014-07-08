@@ -63,7 +63,7 @@ def produce_spikes(firing_rate, dt, T_simulation, remove_start):
     remove_start: the firing rate comes with zeros at the beginning, this is the size of those zeros
     """
 
-    r_max = np.max(firing_rate)  # Transforms to Hz
+    r_max = np.max(firing_rate)  
 
     # Generate the spiking times
     x_exp = np.random.exponential(1000.0 / r_max, size=firing_rate.size) #This does not need to be so long
