@@ -2,7 +2,7 @@ from pyNN.utility import get_script_args, Timer
 import numpy as np
 import matplotlib.pyplot as plt 
 import pyNN.space as space
-from connector_functions import gabor_probability
+from connector_functions import gabor_probability, lgn_to_cortical_connection, create_lgn_to_cortical
 import cPickle
 
 #############################
@@ -50,8 +50,8 @@ f2.close()
 ## Network and Simulation parameters
 #############################
 Ncells_lgn = 30
-Ncell_exc = 40
-Ncell_inh = 20
+Ncell_exc = 10
+Ncell_inh = 5
 
 t = 1000.0  # Simulation time
 
@@ -113,38 +113,72 @@ lgn_spikes_on_model = simulator.SpikeSourceArray(spike_times=spike_times_on)
 lgn_spikes_off_model = simulator.SpikeSourceArray(spike_times=spike_times_off)
 
 # LGN Popluations
-lgn_neurons_on = simulator.Population(Ncells_lgn **2, lgn_spikes_on_model, structure=lgn_structure_on, label='LGN_on')
-lgn_neurons_off = simulator.Population(Ncells_lgn **2, lgn_spikes_off_model, structure=lgn_structure_off, label='LGN_off')
+lgn_neurons_on = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model, structure=lgn_structure_on, label='LGN_on')
+lgn_neurons_off = simulator.Population(Ncells_lgn**2, lgn_spikes_off_model, structure=lgn_structure_off, label='LGN_off')
 
 # Spatial structure of cortical cells
 lx = 0.75
 ly = 0.75
 x0 = -lx / 2
 y0 = -ly / 2
-dx = lx / Ncell_exc
-dy = ly / Ncell_exc
+dx = lx / (Ncell_exc - 1)
+dy = ly / (Ncell_exc - 1)
 
 excitatory_structure = space.Grid2D(aspect_ratio=1, x0=x0, y0=y0, dx=dx, dy=dy, z=0)
 inhibitory_structure = space.Grid2D(aspect_ratio=1, x0=0, y0=0, dx=2*dx, dy=2*dy, z=0)
 
 # Cortical parameters
-Vth = -52.5
-delay = 2.00
+
+# Common
+Vth = -52.5  # mV
+delay = 2.00  # ms
+
+# Conductances
+Vex = 0  # mV
+Vin = -70 # mV
+t_fall_exc = 1.75 # mV
+t_fall_inh = 5.27 # mV
+
+
+# Excitatory
+C_exc = 0.500  # Nanofarads (500 Picofarads)
+g_leak_exc = 0.025  # Microsiemens (25 Nanosiemens)
+t_refrac_exc = 1.5  # ms
+v_leak_exc = -73.6  # mV
+v_reset_exc = -56.6  # mV
+t_m_exc = C_exc / g_leak_exc  # Membrane time constant
+
+# Inhibitory
+C_inh = 0.214  # Nanofarads (214 Picofarads)
+g_leak_inh = 0.018  # Microsiemens (18 Nanosiemens)
+v_leak_inh = -81.6  # mV
+v_reset_inh = -57.8  # mV
+t_refrac_inh = 1.0  # ms
+t_m_inh = C_inh / g_leak_inh  # Membrane time constant
+
+# Cortical cell models
+excitatory_cell = simulator.IF_cond_exp(tau_refrac=t_refrac_exc, cm=C_exc, tau_syn_E=t_fall_exc, v_rest=v_leak_exc,
+                                        tau_syn_I=t_fall_inh, tau_m=t_m_exc, e_rev_E=Vex, e_rev_I=Vin, v_thresh=Vth,
+                                        v_reset=v_reset_exc)
+
+inhibitory_cell = simulator.IF_cond_exp(tau_refrac=t_refrac_inh, cm=C_inh, tau_syn_E=t_fall_exc, v_rest=v_leak_inh,
+                                        tau_syn_I=t_fall_inh, tau_m=t_m_inh, e_rev_E=Vex, e_rev_I=Vin, v_thresh=Vth,
+                                        v_reset=v_reset_inh)
 
 
 # Cortical Population
-cortical_neurons_exc = simulator.Population(1, simulator.IF_cond_exp())
-#cortical_neurons_exc = simulator.Population(Ncell_exc**2, simulator.IF_cond_exp(), structure=excitatory_structure)
-cortical_neurons_inh = simulator.Population(Ncell_inh**2, simulator.IF_cond_exp(), structure=inhibitory_structure)
+cortical_neurons_exc = simulator.Population(1, excitatory_cell)
+cortical_neurons_exc = simulator.Population(Ncell_exc**2, excitatory_cell, structure=excitatory_structure)
+cortical_neurons_inh = simulator.Population(Ncell_inh**2, inhibitory_cell, structure=inhibitory_structure)
 
 #############################
 # Add background noise
 #############################
 
 correlated = True
-noise_rate = 5800 # Hz
-g_noise = 0.00089  # Microsiemens
-noise_delay = 1 # ms
+noise_rate = 5800  # Hz
+g_noise = 0.00089  # Microsiemens (0.89 Nanosiemens)
+noise_delay = 1  # ms
 noise_model = simulator.SpikeSourcePoisson(rate=noise_rate)
 noise_syn = simulator.StaticSynapse(weight=g_noise, delay=noise_delay)
 
@@ -169,48 +203,33 @@ else:
 ## Thalamo-Cortical connections
 #############################
 
-def lgn_to_cortical_connection(connect_to_neuron, connections, lgn_neurons, n_pick, g_exc, polarity):
-    """
-    Connections from the thalamus to the cell connecto_to_neuron
-    """
-
-    for lgn_neuron in lgn_neurons:
-            # Extract position
-            x, y = lgn_neuron.position[0:2]
-            #print 'x, y', x, y
-            # Calculate the gabbor probability
-            probability = polarity * gabor_probability(x, y, sigma, gamma, phi, w, theta)
-            probability = np.sum(np.random.rand(n_pick) < probability) # Samples
-            #print probability
-            synaptic_weight = (g_exc / n_pick) * probability
-            #print synaptic_weight
-            neuron_index = lgn_neurons.id_to_index(lgn_neuron)
-
-            # The format of the connector list should be pre_neuron, post_neuron, w, tau_delay
-            if synaptic_weight > 0 :
-                connections.append((neuron_index, connect_to_neuron, synaptic_weight, 0.1))
 
 ## Create the connector
 exc_connections = []
 inh_connections = []
 
-for cortical_neuron in cortical_neurons_exc:
+phases_exc = np.random.rand(Ncell_exc**2) * 2 * np.pi
+orientations_exc = np.random.rand(Ncell_exc**2) * np.pi
 
-    w = 0.8  # Spatial frequency
-    random_phase = np.random.rand() * 2
-    phi = random_phase * np.pi  # Phase
-    gamma = 1  # Aspect ratio
-    sigma = 1  # Decay ratio
-    random_orientation = np.random.rand()
-    theta = random_orientation * np.pi # Orientation
+phases_inh = np.random.rand(Ncell_inh**2) * 2 * np.pi
+orientations_inh = np.random.rand(Ncell_inh**2) * np.pi
+w = 0.8  # Spatial frequency
+gamma = 1  # Aspect ratio
+sigma = 1  # Decay ratio
+g_exc = 0.00098  # microsiemens
+n_pick = 3  # Number of times to sample
 
-    g_exc = 0.98 
-    n_pick = 3  # Number of times to sample
 
-    connect_to_neuron = cortical_neurons_exc.id_to_index(cortical_neuron)  # Connects to this neuron
-    print 'connect to neuron', connect_to_neuron
-    lgn_to_cortical_connection(connect_to_neuron, exc_connections, lgn_neurons_on, n_pick, g_exc, 1)
-    lgn_to_cortical_connection(connect_to_neuron, inh_connections, lgn_neurons_off, n_pick, g_exc, -1)
+
+polarity_on = 1
+polarity_off = -1
+exc_connections = create_lgn_to_cortical(lgn_neurons_on, cortical_neurons_exc, polarity_on,  n_pick, g_exc,
+                                         sigma, gamma, phases_exc, w, orientations_exc)
+
+inh_connections = create_lgn_to_cortical(lgn_neurons_off, cortical_neurons_exc, polarity_off,  n_pick, g_exc,
+                                         sigma, gamma, phases_exc, w, orientations_exc)
+
+
 
 # Make the list a connector
 exc_connector = simulator.FromListConnector(exc_connections, column_names=["weight", "delay"])
@@ -221,10 +240,10 @@ syn1 = simulator.StaticSynapse(weight=1, delay=0.5)
 syn2 = simulator.StaticSynapse(weight=1, delay=3)
 
 excitatory_connections = simulator.Projection(lgn_neurons_on, cortical_neurons_exc, exc_connector,
-                                              syn1, receptor_type='excitatory')
+                                              receptor_type='excitatory')
 
 inhibitory_connections = simulator.Projection(lgn_neurons_on, cortical_neurons_exc, inh_connector,
-                                              syn1, receptor_type='inhibitory')
+                                              receptor_type='inhibitory')
 
 
 #############################

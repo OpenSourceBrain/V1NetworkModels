@@ -31,6 +31,60 @@ def gabor_probability(x, y, sigma, gamma, phi, w, theta, xc=0, yc=0):
 
     return exp_part * cos_part
 
+def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, n_pick, g_exc, polarity, sigma,
+                               gamma, phi, w, theta, x_cortical, y_cortical):
+    """
+    Creates connections from the LGN to the cortex with a Gabor profile.
+
+    This function adds all the connections from the LGN to the cortical cell with index = cortical_neuron_index. It
+    requieres as parameters the cortical_neruon_index, the current list of connections, the lgn population and also
+    the parameters of the Gabor function.
+
+     Parameters
+     ----
+
+    """
+
+    for lgn_neuron in lgn_neurons:
+            # Extract position
+            x, y = lgn_neuron.position[0:2]
+            # Calculate the gabbor probability
+            probability = polarity * gabor_probability(x, y, sigma, gamma, phi, w, theta, x_cortical, y_cortical)
+            probability = np.sum(np.random.rand(n_pick) < probability)  # Samples
+
+            synaptic_weight = (g_exc / n_pick) * probability
+            lgn_neuron_index = lgn_neurons.id_to_index(lgn_neuron)
+
+            # The format of the connector list should be pre_neuron, post_neuron, w, tau_delay
+            if synaptic_weight > 0:
+                connections.append((lgn_neuron_index, cortical_neuron_index, synaptic_weight, 0.1))
+
+
+def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pick, g_exc, sigma, gamma, phases,
+                           w, orientations):
+    """
+    Creates the connection from the lgn population to the cortical population with a gabor profile
+    """
+
+    print 'Connection to ' + cortical_population.label + 'from ' + lgn_population.label
+
+    # Intiliaze connection
+    connections = []
+
+    for cortical_neuron in cortical_population:
+        # Set the parameters
+        x_cortical, y_cortical = cortical_neuron.position[0:2]
+        cortical_neuron_index = cortical_population.id_to_index(cortical_neuron)
+        theta = orientations[cortical_neuron_index]
+        phi = phases[cortical_neuron_index]
+
+        # Creat the connection
+        print 'Connecting ', cortical_neuron_index
+        lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g_exc, polarity, sigma,
+                                   gamma, phi, w, theta, x_cortical, y_cortical)
+
+    return connections
+
 
 def calculate_correlations_to_cell(x_position, y_position, x_values, y_values,
                                    lx, dx, ly, dy, sigma_center, sigma_surround):
