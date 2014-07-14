@@ -119,7 +119,9 @@ for layer in xrange(number_of_layers):
             for index in signal_indexes:
                 firing_rate[index] = convolution(index, kernel_times, delay_indexes, stimuli_indexes, kernel, stimuli)
     
-            firing_rate += 10  # Add background noise
+            #firing_rate += 10  # Add background noise for on cells
+            firing_rate += 15  # Add background noise for off cells
+            
             # Rectify the firing rate
             firing_rate[ firing_rate < 0] = 0
                     

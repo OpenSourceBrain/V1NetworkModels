@@ -21,14 +21,18 @@ def gabor_kernel(lx, dx, ly, dy, sigma, gamma, phi, w, theta, xc=0, yc=0):
     
     x = np.arange(-lx/2, lx/2, dx)
     y = np.arange(-ly/2, ly/2, dy)
+
+    # Translate
+    x -= xc
+    y -= yc
     
     X, Y = np.meshgrid(x, y)
     
     X = np.cos(theta) * X + np.sin(theta) * Y
     Y = - np.sin(theta) * X + np.cos(theta) * Y
     
-    exp_part = np.exp(-((X - xc)**2 + (gamma * (Y - yc))**2)/(2 * sigma**2))
-    cos_part = np.cos(2 * np.pi * w * (X - xc) + phi)
+    exp_part = np.exp(-(X**2 + (gamma * Y)**2)/(2 * sigma**2))
+    cos_part = np.cos(2 * np.pi * w * X + phi)
 
     return exp_part * cos_part
 

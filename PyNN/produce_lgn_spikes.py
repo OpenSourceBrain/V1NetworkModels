@@ -77,7 +77,7 @@ half_lattice_x = 0.5 * lx_cells / Ncells
 half_lattice_y = 0.5 * ly_cells / Ncells
 
 # Coordinates of the cells to be simulated 
-x_values = np.linspace(-lx_cells/2 , lx_cells/2, Ncells, endpoint=True) 
+x_values = np.linspace(-lx_cells/2, lx_cells/2, Ncells, endpoint=True)
 y_values = np.linspace(-ly_cells/2, ly_cells/2, Ncells, endpoint=True)
 
 spike_train = []
@@ -106,7 +106,6 @@ for x in x_values:
 
         positions.append((x,y))
 
-
         # Create the kernel
         kernel = create_kernel(dx, lx, dy, ly, sigma_surround, sigma_center,
                                dt_kernel, kernel_size, inverse=on_off_cells, x_tra=xc, y_tra=yc)
@@ -120,7 +119,7 @@ for x in x_values:
 
         firing_rate += 10  # Add background noise
         # Rectify the firing rate
-        firing_rate[ firing_rate < 0] = 0
+        firing_rate[firing_rate < 0] = 0
                 
         # Produce spikes with the signal
         spike_times_thin = produce_spikes(firing_rate, dt, T_simulation, remove_start, 60.0)
