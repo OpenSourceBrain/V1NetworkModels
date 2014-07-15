@@ -67,7 +67,7 @@ def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pic
     Creates the connection from the lgn population to the cortical population with a gabor profile
     """
 
-    print 'Connection to ' + cortical_population.label + ' from ' + lgn_population.label
+    print 'Creating connection from ' + lgn_population.label + ' to ' + cortical_population.label
 
     # Intiliaze connection
     connections = []
@@ -79,8 +79,7 @@ def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pic
         theta = orientations[cortical_neuron_index]
         phi = phases[cortical_neuron_index]
 
-        # Creat the connection
-        print 'Connecting ', cortical_neuron_index
+        # Create the connections from lgn to cortical_neuron
         lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g_exc, polarity, sigma,
                                    gamma, phi, w, theta, x_cortical, y_cortical)
 
@@ -118,7 +117,6 @@ def cortical_to_cortical_connection(target_neuron_index, connections, source_pop
 
         # Probability is the product
         probability = or_gauss * phase_gauss
-        print 'probability', probability
         probability = np.sum(np.random.rand(n_pick) < probability)  # Samples
         synaptic_weight = (g / n_pick) * probability
 
@@ -132,7 +130,7 @@ def create_cortical_to_cortical_connection(source_population, target_population,
     """
     Creates the connections from source population to target population in the cortex.
     """
-
+    print 'Creating connection from ' + source_population.label + ' to ' + target_population.label
     connections = []
 
     for target_neuron in target_population:

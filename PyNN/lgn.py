@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import pyNN.space as space
 from connector_functions import gabor_probability, lgn_to_cortical_connection, create_lgn_to_cortical
+from connector_functions import create_cortical_to_cortical_connection
 import cPickle
 
 #############################
@@ -29,7 +30,7 @@ f1.close()
 mark = 'spike_train'
 spikes_filename = directory + mark + polarity + layer + format
 f2 = open(spikes_filename, 'rb')
-spikes_on = cPickle.load(f2)
+spikes_on_1 = cPickle.load(f2)
 f2.close()
 
 polarity = '_off'
@@ -43,7 +44,7 @@ f1.close()
 mark = 'spike_train'
 spikes_filename = directory + mark + polarity + layer + format
 f2 = open(spikes_filename, 'rb')
-spikes_off = cPickle.load(f2)
+spikes_off_1 = cPickle.load(f2)
 f2.close()
 
 #############################
@@ -52,6 +53,8 @@ f2.close()
 Ncells_lgn = 30
 Ncell_exc = 10
 Ncell_inh = 5
+Ncell_exc = 40
+Ncell_inh = 20
 
 t = 1000.0  # Simulation time
 
@@ -69,15 +72,15 @@ def spike_times_on(i):
 
     A = []
     for k in range(len(i)):
-        A.append(spikes_on[k])
+        A.append(spikes_on_1[k])
 
     return A
 
-def spike_times_on(i):
-    return spikes_on
+def spike_times_on_1(i):
+    return spikes_on_1
 
-def spike_times_off(i):
-    return spikes_off
+def spike_times_off_1(i):
+    return spikes_off_1
 
 
 # Spatial structure of on LGN cells
@@ -109,8 +112,8 @@ ly = y_end - y0
 lgn_structure_off = space.Grid2D(aspect_ratio=1, x0=x0, y0=y0, dx=dx, dy=dy, z=0)
 
 # Spikes for LGN populations
-lgn_spikes_on_model = simulator.SpikeSourceArray(spike_times=spike_times_on)
-lgn_spikes_off_model = simulator.SpikeSourceArray(spike_times=spike_times_off)
+lgn_spikes_on_model = simulator.SpikeSourceArray(spike_times=spike_times_on_1)
+lgn_spikes_off_model = simulator.SpikeSourceArray(spike_times=spike_times_off_1)
 
 # LGN Popluations
 lgn_neurons_on = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model, structure=lgn_structure_on, label='LGN_on')
@@ -135,9 +138,9 @@ delay = 2.00  # ms
 
 # Conductances
 Vex = 0  # mV
-Vin = -70 # mV
-t_fall_exc = 1.75 # mV
-t_fall_inh = 5.27 # mV
+Vin = -70  # mV
+t_fall_exc = 1.75  # mV
+t_fall_inh = 5.27  # mV
 
 
 # Excitatory
@@ -168,8 +171,10 @@ inhibitory_cell = simulator.IF_cond_exp(tau_refrac=t_refrac_inh, cm=C_inh, tau_s
 
 # Cortical Population
 cortical_neurons_exc = simulator.Population(1, excitatory_cell)
-cortical_neurons_exc = simulator.Population(Ncell_exc**2, excitatory_cell, structure=excitatory_structure)
-cortical_neurons_inh = simulator.Population(Ncell_inh**2, inhibitory_cell, structure=inhibitory_structure)
+cortical_neurons_exc = simulator.Population(Ncell_exc**2, excitatory_cell, structure=excitatory_structure,
+                                            label='Excitatory layer')
+cortical_neurons_inh = simulator.Population(Ncell_inh**2, inhibitory_cell, structure=inhibitory_structure,
+                                            label='Inhibitory layer')
 
 #############################
 # Add background noise
@@ -204,51 +209,115 @@ else:
 #############################
 
 
-## Create the connector
-exc_connections = []
-inh_connections = []
-
 phases_exc = np.random.rand(Ncell_exc**2) * 2 * np.pi
 orientations_exc = np.random.rand(Ncell_exc**2) * np.pi
 
 phases_inh = np.random.rand(Ncell_inh**2) * 2 * np.pi
 orientations_inh = np.random.rand(Ncell_inh**2) * np.pi
+
 w = 0.8  # Spatial frequency
 gamma = 1  # Aspect ratio
 sigma = 1  # Decay ratio
 g_exc = 0.00098  # microsiemens
 n_pick = 3  # Number of times to sample
 
-
-
 polarity_on = 1
 polarity_off = -1
-exc_connections = create_lgn_to_cortical(lgn_neurons_on, cortical_neurons_exc, polarity_on,  n_pick, g_exc,
-                                         sigma, gamma, phases_exc, w, orientations_exc)
 
-inh_connections = create_lgn_to_cortical(lgn_neurons_off, cortical_neurons_exc, polarity_off,  n_pick, g_exc,
-                                         sigma, gamma, phases_exc, w, orientations_exc)
+if True:
+
+    # Create the list with the connections
+
+    lgn_on_cortical_exc_connections = create_lgn_to_cortical(lgn_neurons_on, cortical_neurons_exc, polarity_on, n_pick,
+                                                                g_exc, sigma, gamma, phases_exc, w, orientations_exc)
+
+    lgn_off_cortical_exc_connections = create_lgn_to_cortical(lgn_neurons_off, cortical_neurons_exc, polarity_off, n_pick,
+                                                              g_exc, sigma, gamma, phases_exc, w, orientations_exc)
+
+    lgn_on_cortical_inh_connections = create_lgn_to_cortical(lgn_neurons_on, cortical_neurons_inh, polarity_on, n_pick,
+                                                             g_exc, sigma, gamma, phases_inh, w, orientations_inh)
+
+    lgn_off_cortical_inh_connections = create_lgn_to_cortical(lgn_neurons_off, cortical_neurons_inh, polarity_off, n_pick,
+                                                              g_exc, sigma, gamma, phases_inh, w, orientations_inh)
+
+    # Make the list a connector
+    lgn_on_cortical_exc_connector = simulator.FromListConnector(lgn_on_cortical_exc_connections,
+                                                                column_names=["weight", "delay"])
+
+    lgn_off_cortical_exc_connector = simulator.FromListConnector(lgn_off_cortical_exc_connections,
+                                                                 column_names=["weight", "delay"])
+
+    lgn_on_cortical_inh_connector = simulator.FromListConnector(lgn_on_cortical_inh_connections,
+                                                                column_names=["weight", "delay"])
+
+    lgn_off_cortical_inh_connector = simulator.FromListConnector(lgn_off_cortical_inh_connections,
+                                                                 column_names=["weight", "delay"])
+
+    # Synapses
+    syn1 = simulator.StaticSynapse(weight=1, delay=0.5)
+    syn2 = simulator.StaticSynapse(weight=1, delay=3)
 
 
+    ## Projections
+    cortical_exc_projection_on = simulator.Projection(lgn_neurons_on, cortical_neurons_exc, lgn_on_cortical_exc_connector,
+                                                  receptor_type='excitatory')
 
-# Make the list a connector
-exc_connector = simulator.FromListConnector(exc_connections, column_names=["weight", "delay"])
-inh_connector = simulator.FromListConnector(inh_connections, column_names=["weight", "delay"])
+    cortical_exc_projection_off = simulator.Projection(lgn_neurons_off, cortical_neurons_exc, lgn_off_cortical_exc_connector,
+                                                  receptor_type='inhibitory')
 
-# Synapses
-syn1 = simulator.StaticSynapse(weight=1, delay=0.5)
-syn2 = simulator.StaticSynapse(weight=1, delay=3)
+    cortical_inh_projection_on = simulator.Projection(lgn_neurons_on, cortical_neurons_inh, lgn_on_cortical_inh_connector,
+                                                  receptor_type='excitatory')
 
-excitatory_connections = simulator.Projection(lgn_neurons_on, cortical_neurons_exc, exc_connector,
-                                              receptor_type='excitatory')
-
-inhibitory_connections = simulator.Projection(lgn_neurons_on, cortical_neurons_exc, inh_connector,
-                                              receptor_type='inhibitory')
+    cortical_inh_projection_off = simulator.Projection(lgn_neurons_off, cortical_neurons_inh, lgn_off_cortical_inh_connector,
+                                                      receptor_type='inhibitory')
 
 
 #############################
 # Intracortical connections
 #############################
+
+# Connector parameters
+
+n_pick = 10
+
+orientation_sigma = np.pi * 0.25
+phase_sigma = np.pi * 0.75
+
+
+# Create list of connectors
+
+cortical_exc_exc_connections = create_cortical_to_cortical_connection(cortical_neurons_exc, cortical_neurons_exc,
+                                                                      orientations_exc, phases_exc, orientations_exc,
+                                                                      phases_exc, orientation_sigma, phase_sigma, g_exc,
+                                                                      n_pick, target_type_excitatory=True)
+
+cortical_exc_inh_connections = create_cortical_to_cortical_connection(cortical_neurons_exc, cortical_neurons_inh,
+                                                                      orientations_exc, phases_exc, orientations_inh,
+                                                                      phases_inh, orientation_sigma, phase_sigma, g_exc,
+                                                                      n_pick, target_type_excitatory=True)
+
+cortical_inh_exc_connections = create_cortical_to_cortical_connection(cortical_neurons_inh, cortical_neurons_exc,
+                                                                      orientations_inh, phases_inh, orientations_exc,
+                                                                      phases_exc, orientation_sigma, phase_sigma, g_exc,
+                                                                      n_pick, target_type_excitatory=False)
+
+# Make the list a connector
+
+cortical_exc_exc_connector = simulator.FromListConnector(cortical_exc_exc_connections, column_names=["weight", "delay"])
+
+cortical_exc_inh_connector = simulator.FromListConnector(cortical_exc_inh_connections, column_names=["weight", "delay"])
+
+cortical_inh_exc_connector = simulator.FromListConnector(cortical_inh_exc_connections, column_names=["weight", "delay"])
+
+## Projections
+cortical_exc_exc_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_exc,
+                                                   cortical_exc_exc_connector, receptor_type='excitatory')
+
+cortical_exc_inh_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_inh,
+                                                   cortical_exc_inh_connector, receptor_type='excitatory')
+
+cortical_inh_exc_projection = simulator.Projection(cortical_neurons_inh, cortical_neurons_exc,
+                                                   cortical_inh_exc_connector, receptor_type='inhibitory')
 
 
 #############################n
