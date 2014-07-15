@@ -3,7 +3,7 @@ This file contains miscellaneous functions
 """
 
 import numpy as np 
-
+from math import sqrt
 
 def create_standar_indexes(dt, dt_kernel, dt_stimuli, kernel_size, Nt_simulation):
     """
@@ -43,3 +43,20 @@ def create_extra_indexes(kernel_size, Nt_simulation):
     kernel_times = kernel_times.astype(int) 
     
     return working_indexes, kernel_times
+
+
+
+def normal_function(x, mean=0, sigma=1.0):
+    """
+    Returns the value of probability density of normal distribution N(mean,sigma) at point `x`.
+    """
+    _normalization_factor = sqrt(2 * np.pi)
+
+    return np.exp(-np.power((x - mean)/sigma, 2)/2) / (sigma * _normalization_factor)
+
+
+def circular_dist(a, b, period):
+    """
+    Returns the distance between a and b (scalars) in a domain with `period` period.
+    """
+    return  np.minimum(np.abs(a - b), period - np.abs(a - b))

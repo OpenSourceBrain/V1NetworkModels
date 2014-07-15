@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats.stats import pearsonr
 from kernel_functions import spatial_kernel
+from misc_functions import circular_dist, normal_function
 
 def gabor_probability(x, y, sigma, gamma, phi, w, theta, xc=0, yc=0):
 
@@ -66,7 +67,7 @@ def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pic
     Creates the connection from the lgn population to the cortical population with a gabor profile
     """
 
-    print 'Connection to ' + cortical_population.label + 'from ' + lgn_population.label
+    print 'Connection to ' + cortical_population.label + ' from ' + lgn_population.label
 
     # Intiliaze connection
     connections = []
@@ -85,6 +86,69 @@ def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pic
 
     return connections
 
+
+def cortical_to_cortical_connection(target_neuron_index, connections, source_population, n_pick, g, source_orientations,
+                                    source_phases, orientation_sigma, phase_sigma, target_neuron_orientation,
+                                    target_neuron_phase, target_type):
+    """
+    Creates the connections from the source population to the target neuron
+
+    """
+    for source_neuron in source_population:
+        # Extract index, orientation and phase of the target
+        source_neuron_index = source_population.id_to_index(source_neuron)
+        source_neuron_orientation = source_orientations[source_neuron_index]
+        source_neuron_phase = source_phases[source_neuron_index]
+
+        # Now calculate phase and orientation distances
+        or_distance = circular_dist(target_neuron_orientation, source_neuron_orientation, np.pi)
+
+        if target_type:
+            phase_distance = circular_dist(target_neuron_phase, source_neuron_phase, 2*np.pi)
+        else:
+            phase_distance = np.pi - circular_dist(target_neuron_phase, source_neuron_phase, 2*np.pi)
+
+        # Now calculate the gaussian function
+        or_gauss = normal_function(or_distance, mean=0, sigma=orientation_sigma)
+        phase_gauss = normal_function(phase_distance, mean=0, sigma=phase_sigma)
+
+        # Now normalize by guassian in zero
+        or_gauss = or_gauss / normal_function(0, mean=0, sigma=orientation_sigma)
+        phase_gauss = phase_gauss / normal_function(0, mean=0, sigma=phase_sigma)
+
+        # Probability is the product
+        probability = or_gauss * phase_gauss
+        print 'probability', probability
+        probability = np.sum(np.random.rand(n_pick) < probability)  # Samples
+        synaptic_weight = (g / n_pick) * probability
+
+        if synaptic_weight > 0:
+                    connections.append((source_neuron_index, target_neuron_index, synaptic_weight, 0.1))
+
+
+def create_cortical_to_cortical_connection(source_population, target_population, source_orientations, source_phases,
+                                           target_orientations, target_phases, orientation_sigma, phase_sigma,
+                                           g, n_pick, target_type_excitatory=True):
+    """
+    Creates the connections from source population to target population in the cortex.
+    """
+
+    connections = []
+
+    for target_neuron in target_population:
+
+        # Extract targe parameters
+        target_neuron_index = target_population.id_to_index(target_neuron)
+        target_neuron_orientation = target_orientations[target_neuron_index]
+        target_neuron_phase = target_phases[target_neuron_index]
+
+        # Create the connection from source to target_neuron
+        cortical_to_cortical_connection(target_neuron_index, connections, source_population, n_pick, g,
+                                        source_orientations, source_phases, orientation_sigma, phase_sigma,
+                                        target_neuron_orientation, target_neuron_phase, target_type=target_type_excitatory)
+
+
+    return connections
 
 def calculate_correlations_to_cell(x_position, y_position, x_values, y_values,
                                    lx, dx, ly, dy, sigma_center, sigma_surround):
