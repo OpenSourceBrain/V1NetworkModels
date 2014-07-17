@@ -67,3 +67,13 @@ def plot_mutliplot_bilinear(N,ims, colorbar=True, symmetric=0):
         plt.imshow(ims[i,:,:], interpolation='bilinear', cmap=blue_red1, vmin=vmin, vmax=vmax)
         if colorbar==True:
             plt.colorbar()
+
+def plot_spiketrains(segment):
+    """
+    Plots the spikes of all the cells in the given segments 
+    """
+    for spiketrain in segment.spiketrains:
+        y = np.ones_like(spiketrain) * spiketrain.annotations['source_id']
+        plt.plot(spiketrain, y, '*b')
+    plt.ylabel('Neuron number')
+    plt.xlabel('Spikes')

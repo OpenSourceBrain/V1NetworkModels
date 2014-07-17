@@ -10,10 +10,7 @@ import cPickle
 
 #simulator_name = get_script_args(1)[0]
 #exec("import pyNN.%s as simulator" % simulator_name)
-
-simulator_name = 'nest'
-exec("import pyNN.%s as simulator" % simulator_name)
-
+import pyNN.nest as simulator
 
 #############################
 # Load LGN spikes and positions
@@ -202,17 +199,17 @@ lgn_spikes_on_model_3 = simulator.SpikeSourceArray(spike_times=spike_times_on_3)
 lgn_spikes_off_model_3 = simulator.SpikeSourceArray(spike_times=spike_times_off_3)
 
 # LGN Popluations
-lgn_neurons_on = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model_0, structure=lgn_structure_on, label='LGN_on')
-lgn_neurons_off = simulator.Population(Ncells_lgn**2, lgn_spikes_off_model_0, structure=lgn_structure_off, label='LGN_off')
+lgn_neurons_on_0 = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model_0, structure=lgn_structure_on, label='LGN_on-layer0')
+lgn_neurons_off_0 = simulator.Population(Ncells_lgn**2, lgn_spikes_off_model_0, structure=lgn_structure_off, label='LGN_off-layer0')
 
-lgn_neurons_on_1 = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model_1, structure=lgn_structure_on, label='LGN_on')
-lgn_neurons_off_1 = simulator.Population(Ncells_lgn**2, lgn_spikes_off_model_1, structure=lgn_structure_off, label='LGN_off')
+lgn_neurons_on_1 = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model_1, structure=lgn_structure_on, label='LGN_on-layer1')
+lgn_neurons_off_1 = simulator.Population(Ncells_lgn**2, lgn_spikes_off_model_1, structure=lgn_structure_off, label='LGN_off-layer1')
 
-lgn_neurons_on_2 = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model_2, structure=lgn_structure_on, label='LGN_on')
-lgn_neurons_off_2 = simulator.Population(Ncells_lgn**2, lgn_spikes_off_model_2, structure=lgn_structure_off, label='LGN_off')
+lgn_neurons_on_2 = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model_2, structure=lgn_structure_on, label='LGN_on-layer2')
+lgn_neurons_off_2 = simulator.Population(Ncells_lgn**2, lgn_spikes_off_model_2, structure=lgn_structure_off, label='LGN_off-layer2')
 
-lgn_neurons_on_3 = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model_3, structure=lgn_structure_on, label='LGN_on')
-lgn_neurons_off_3 = simulator.Population(Ncells_lgn**2, lgn_spikes_off_model_3, structure=lgn_structure_off, label='LGN_off')
+lgn_neurons_on_3 = simulator.Population(Ncells_lgn**2, lgn_spikes_on_model_3, structure=lgn_structure_on, label='LGN_on-layer3')
+lgn_neurons_off_3 = simulator.Population(Ncells_lgn**2, lgn_spikes_off_model_3, structure=lgn_structure_off, label='LGN_off-layer3')
 
 
 # Spatial structure of cortical cells
@@ -304,6 +301,7 @@ else:
 ## Thalamo-Cortical connections
 #############################
 
+# Sample random phases and orientations 
 
 phases_exc = np.random.rand(Ncell_exc**2) * 2 * np.pi
 orientations_exc = np.random.rand(Ncell_exc**2) * np.pi
@@ -320,28 +318,24 @@ n_pick = 3  # Number of times to sample
 polarity_on = 1
 polarity_off = -1
 
-
-    
-    
-
+lgn_on_populations = [lgn_neurons_on_0, lgn_neurons_on_1, lgn_neurons_on_2, lgn_neurons_on_3]
+lgn_off_populations = [lgn_neurons_off_0, lgn_neurons_off_1, lgn_neurons_off_2, lgn_neurons_off_3]
 
 if True:
     
-    # LGN_on -> e  connection
-    create_thalamocortical_connection(lgn_neurons_on, cortical_neurons_exc, polarity_on, n_pick, g_exc, 
-                                      sigma, gamma, w, phases_exc, orientations_exc, simulator)
-    # LGN_off - > e  connection
-    create_thalamocortical_connection(lgn_neurons_off, cortical_neurons_exc, polarity_off, n_pick, g_exc, 
-                                      sigma, gamma, w, phases_exc, orientations_exc, simulator)
-    # LGN_on -> i  connection
-    create_thalamocortical_connection(lgn_neurons_on, cortical_neurons_inh, polarity_on, n_pick, g_exc, 
-                                      sigma, gamma, w, phases_exc, orientations_exc, simulator)
-    # LGN_off -> i connection
-    create_thalamocortical_connection(lgn_neurons_off, cortical_neurons_inh, polarity_off, n_pick, g_exc, 
-                                      sigma, gamma, w, phases_exc, orientations_exc, simulator)
+    for on_population, off_population in zip(lgn_on_populations, lgn_off_populations):
 
-    
-    
+        create_thalamocortical_connection(on_population, cortical_neurons_exc, polarity_on, n_pick, g_exc, 
+                                         sigma, gamma, w, phases_exc, orientations_exc, simulator)
+        
+        create_thalamocortical_connection(off_population, cortical_neurons_exc, polarity_off, n_pick, g_exc, 
+                                         sigma, gamma, w, phases_exc, orientations_exc, simulator)
+        
+        create_thalamocortical_connection(on_population, cortical_neurons_inh, polarity_on, n_pick, g_exc, 
+                                         sigma, gamma, w, phases_exc, orientations_exc, simulator)
+        
+        create_thalamocortical_connection(off_population, cortical_neurons_inh, polarity_off, n_pick, g_exc, 
+                                         sigma, gamma, w, phases_exc, orientations_exc, simulator)
 
 #############################
 # Intracortical connections
@@ -355,7 +349,7 @@ orientation_sigma = np.pi * 0.25
 phase_sigma = np.pi * 0.75
 
 # If true add cortical excitatory feedback (e -> e) and ( e -> i ) 
-cortical_excitatory_feedback = True
+cortical_excitatory_feedback = False 
 
 ## We create inhibitory feed-forward connections ( i -> e)   
 
@@ -403,7 +397,6 @@ if cortical_excitatory_feedback:
 # Recordings
 #############################
 
-lgn_neurons_on.record('spikes')
 cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh'])
 
 
@@ -417,8 +410,8 @@ simulator.end()
 # Extract the data
 #############################
 
-data = lgn_neurons_on.get_data()  # Creates a Neo Block
-segment = data.segments[0]  # Takes the first segment          
+#data = lgn_neurons_on.get_data()  # Creates a Neo Block
+#segment = data.segments[0]  # Takes the first segment          
 
 data2 = cortical_neurons_exc.get_data()
 segment2 = data2.segments[0]
@@ -427,9 +420,8 @@ g_inh = segment2.analogsignalarrays[1]
 #plt.plot(g_exc.times, np.mean(g_exc, axis=1))
 #plt.plot(g_inh.times, -np.mean(g_inh, axis=1))
 
-plt.plot(g_exc.times, g_exc[:, 0], label='Excitatory conductance')
-plt.plot(g_inh.times, g_inh[:, 0], label='Inhibitory conductance')
-plt.legend()
+plt.plot(g_exc.times, g_exc[:, 0])
+plt.plot(g_inh.times, g_inh[:, 0])
 
 plt.show()
 

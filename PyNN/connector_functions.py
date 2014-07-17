@@ -19,8 +19,8 @@ def gabor_probability(x, y, sigma, gamma, phi, w, theta, xc=0, yc=0):
     """
 
     # Translate
-    x -= xc
-    y -= yc
+    x = x - xc
+    y = y - yc
 
     # Rotate
     x = np.cos(theta) * x + np.sin(theta) * y
@@ -147,6 +147,23 @@ def create_cortical_to_cortical_connection(source_population, target_population,
 
 
     return connections
+
+
+def create_thalamocortical_connection(source, target, polarity, n_pick, g, sigma, gamma, w, phases, orientations, simulator):
+    """
+    Creates a conection from a layer in the thalamus to a layer in the cortex through the mechanism of gabor sampling 
+    """
+    
+    # Produce a list with the connections 
+    connections_list = create_lgn_to_cortical(source, target, polarity, n_pick, g, sigma, gamma, phases, w, orientations)
+    
+    # Transform it into a connector 
+    connector = simulator.FromListConnector(connections_list, column_names=["weight", "delay"])
+    
+    # Create the excitatory and inhibitory projections 
+    simulator.Projection(source, target, connector, receptor_type='excitatory')
+    simulator.Projection(source, target, connector, receptor_type='inhibitory')
+    
 
 def calculate_correlations_to_cell(x_position, y_position, x_values, y_values,
                                    lx, dx, ly, dy, sigma_center, sigma_surround):
