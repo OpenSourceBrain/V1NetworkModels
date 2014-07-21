@@ -18,6 +18,10 @@ def gabor_probability(x, y, sigma, gamma, phi, w, theta, xc=0, yc=0):
     xc, yc : Linear translation
     """
 
+    transforms_to_radians = np.pi / 180
+    theta *= transforms_to_radians
+    phi *= transforms_to_radians  # Transforms to radians
+
     # Translate
     x = x - xc
     y = y - yc
@@ -100,12 +104,12 @@ def cortical_to_cortical_connection(target_neuron_index, connections, source_pop
         source_neuron_phase = source_phases[source_neuron_index]
 
         # Now calculate phase and orientation distances
-        or_distance = circular_dist(target_neuron_orientation, source_neuron_orientation, np.pi)
+        or_distance = circular_dist(target_neuron_orientation, source_neuron_orientation, 180)
 
         if target_type:
-            phase_distance = circular_dist(target_neuron_phase, source_neuron_phase, 2*np.pi)
+            phase_distance = circular_dist(target_neuron_phase, source_neuron_phase, 360)
         else:
-            phase_distance = np.pi - circular_dist(target_neuron_phase, source_neuron_phase, 2*np.pi)
+            phase_distance = np.pi - circular_dist(target_neuron_phase, source_neuron_phase, 360)
 
         # Now calculate the gaussian function
         or_gauss = normal_function(or_distance, mean=0, sigma=orientation_sigma)

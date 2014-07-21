@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 def gabor_kernel(lx, dx, ly, dy, sigma, gamma, phi, w, theta, xc=0, yc=0):
-    '''
+    """
     Produces a gabor pattern. That is, the product of an exponential
     term and a sinusoidal term 
     
@@ -17,8 +17,12 @@ def gabor_kernel(lx, dx, ly, dy, sigma, gamma, phi, w, theta, xc=0, yc=0):
     w: Frequency of the pattern 
     theta: Rotates the whole pattern by the angle theta
     
-    '''
-    
+    """
+
+    transforms_to_radians = np.pi / 180
+    theta *= transforms_to_radians  # Transforms to radians
+    phi *= transforms_to_radians
+
     x = np.arange(-lx/2, lx/2, dx)
     y = np.arange(-ly/2, ly/2, dy)
 

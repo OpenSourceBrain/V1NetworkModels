@@ -263,7 +263,6 @@ inhibitory_cell = simulator.IF_cond_exp(tau_refrac=t_refrac_inh, cm=C_inh, tau_s
 
 
 # Cortical Population
-cortical_neurons_exc = simulator.Population(1, excitatory_cell)
 cortical_neurons_exc = simulator.Population(Ncell_exc**2, excitatory_cell, structure=excitatory_structure,
                                             label='Excitatory layer')
 cortical_neurons_inh = simulator.Population(Ncell_inh**2, inhibitory_cell, structure=inhibitory_structure,
@@ -273,7 +272,7 @@ cortical_neurons_inh = simulator.Population(Ncell_inh**2, inhibitory_cell, struc
 # Add background noise
 #############################
 
-correlated = False
+correlated = True
 noise_rate = 5800  # Hz
 g_noise = 0.00089 * 0  # Microsiemens (0.89 Nanosiemens)
 noise_delay = 1  # ms
@@ -303,11 +302,20 @@ else:
 
 # Sample random phases and orientations 
 
-phases_exc = np.random.rand(Ncell_exc**2) * 2 * np.pi
-orientations_exc = np.random.rand(Ncell_exc**2) * np.pi
+phases_space = np.linspace(-180, 180, 20)
+orientation_space = np.linspace(-90, 90, 20)
+
+phases_exc = np.random.rand(Ncell_exc**2) * 360  # Phases continium
+#phases_exc = np.random.choice(phases_space, Ncell_exc*2) # Phases discrete
+
+orientations_exc = np.random.rand(Ncell_exc**2) * 180  # Orientations continium
+orientations_exc = np.random.choice(orientation_space, Ncell_exc**2)   # Orientations discrete
 
 phases_inh = np.random.rand(Ncell_inh**2) * 2 * np.pi
+#phases_inh = np.random.choice(phases_space, Ncell_inh*2) # Phases discrete
+
 orientations_inh = np.random.rand(Ncell_inh**2) * np.pi
+orientations_inh = np.random.choice(orientation_space, Ncell_inh**2)  # Orientations discrete
 
 w = 0.8  # Spatial frequency
 gamma = 1  # Aspect ratio
@@ -345,8 +353,8 @@ if True:
 
 n_pick = 10
 
-orientation_sigma = np.pi * 0.25
-phase_sigma = np.pi * 0.75
+orientation_sigma = 20   # Grades
+phase_sigma = 40  # Grades
 
 # If true add cortical excitatory feedback (e -> e) and ( e -> i ) 
 cortical_excitatory_feedback = False 
@@ -356,14 +364,14 @@ cortical_excitatory_feedback = False
 # Create list of connections 
 cortical_inh_exc_connections = create_cortical_to_cortical_connection(cortical_neurons_inh, cortical_neurons_exc,
                                                                       orientations_inh, phases_inh, orientations_exc,
-                                                                      phases_exc, orientation_sigma, phase_sigma, g_exc,
+                                                                      phases_exc, orientation_sigma, phase_sigma, 10 * g_exc,
                                                                       n_pick, target_type_excitatory=False)
 # Make the list a connector
 cortical_inh_exc_connector = simulator.FromListConnector(cortical_inh_exc_connections, column_names=["weight", "delay"])
 
 # Projections
-#cortical_inh_exc_projection = simulator.Projection(cortical_neurons_inh, cortical_neurons_exc,
-#                                                   cortical_inh_exc_connector, receptor_type='inhibitory')
+cortical_inh_exc_projection = simulator.Projection(cortical_neurons_inh, cortical_neurons_exc,
+                                                   cortical_inh_exc_connector, receptor_type='inhibitory')
 
 ## Now we create the excitatory connections 
 if cortical_excitatory_feedback:
@@ -397,8 +405,9 @@ if cortical_excitatory_feedback:
 # Recordings
 #############################
 
-cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh'])
-
+#cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh'])
+#cortical_neurons_exc.record('spikes')
+cortical_neurons_exc.record('v')
 
 #############################
 # Run model
@@ -410,20 +419,20 @@ simulator.end()
 # Extract the data
 #############################
 
-#data = lgn_neurons_on.get_data()  # Creates a Neo Block
-#segment = data.segments[0]  # Takes the first segment          
+data = cortical_neurons_exc.get_data()  # Creates a Neo Block
+segment = data.segments[0]  # Takes the first segment
 
-data2 = cortical_neurons_exc.get_data()
-segment2 = data2.segments[0]
-g_exc = segment2.analogsignalarrays[0]
-g_inh = segment2.analogsignalarrays[1]
+#data2 = cortical_neurons_exc.get_data()
+#segment2 = data2.segments[0]
+#g_exc = segment2.analogsignalarrays[0]
+#g_inh = segment2.analogsignalarrays[1]
 #plt.plot(g_exc.times, np.mean(g_exc, axis=1))
 #plt.plot(g_inh.times, -np.mean(g_inh, axis=1))
 
-plt.plot(g_exc.times, g_exc[:, 0])
-plt.plot(g_inh.times, g_inh[:, 0])
+#plt.plot(g_exc.times, g_exc[:, 0])
+#plt.plot(g_inh.times, g_inh[:, 0])
 
-plt.show()
+#plt.show()
 
 # Plot the spikes 
 

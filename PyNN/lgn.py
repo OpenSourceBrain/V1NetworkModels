@@ -11,8 +11,10 @@ import cPickle
 #simulator_name = get_script_args(1)[0]
 #exec("import pyNN.%s as simulator" % simulator_name)
 
-simulator_name = 'nest'
-exec("import pyNN.%s as simulator" % simulator_name)
+#simulator_name = 'nest'
+#exec("import pyNN.%s as simulator" % simulator_name)
+
+import pyNN.nest as simulator
 
 
 #############################
@@ -305,11 +307,22 @@ else:
 #############################
 
 
-phases_exc = np.random.rand(Ncell_exc**2) * 2 * np.pi
-orientations_exc = np.random.rand(Ncell_exc**2) * np.pi
+# Sample random phases and orientations
+
+phases_space = np.linspace(-180, 180, 20)
+orientation_space = np.linspace(-90, 90, 20)
+
+phases_exc = np.random.rand(Ncell_exc**2) * 360  # Phases continium
+#phases_exc = np.random.choice(phases_space, Ncell_exc*2) # Phases discrete
+
+orientations_exc = np.random.rand(Ncell_exc**2) * 180  # Orientations continium
+orientations_exc = np.random.choice(orientation_space, Ncell_exc**2)   # Orientations discrete
 
 phases_inh = np.random.rand(Ncell_inh**2) * 2 * np.pi
+#phases_inh = np.random.choice(phases_space, Ncell_inh*2) # Phases discrete
+
 orientations_inh = np.random.rand(Ncell_inh**2) * np.pi
+orientations_inh = np.random.choice(orientation_space, Ncell_inh**2)  # Orientations discrete
 
 w = 0.8  # Spatial frequency
 gamma = 1  # Aspect ratio
@@ -319,10 +332,6 @@ n_pick = 3  # Number of times to sample
 
 polarity_on = 1
 polarity_off = -1
-
-
-    
-    
 
 
 if True:
@@ -351,8 +360,8 @@ if True:
 
 n_pick = 10
 
-orientation_sigma = np.pi * 0.25
-phase_sigma = np.pi * 0.75
+orientation_sigma = np.pi * 0.25  # Decay in connectivity due to orientation differences
+phase_sigma = np.pi * 0.75  # Decay in connectivity due to phase differences
 
 # If true add cortical excitatory feedback (e -> e) and ( e -> i ) 
 cortical_excitatory_feedback = True
