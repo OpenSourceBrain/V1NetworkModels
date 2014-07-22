@@ -84,3 +84,17 @@ def produce_spikes(firing_rate, dt, T_simulation, remove_start):
     spike_times = spike_times[ratio >= x]
 
     return spike_times
+
+
+def calculate_tuning(population, population_orientations, orientation_space):
+    """
+    Calculates and plots the mean rate of the cells in population as a function 
+    of its orientations. The orientation_space is the space from where the orientations where 
+    sampled 
+    """
+    mean_rate = np.zeros(orientation_space.size)
+    
+    for index, orientation in enumerate(orientation_space):
+        mean_rate[index] = population[population_orientations == orientation].mean_spike_count()
+    
+    return mean_rate
