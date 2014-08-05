@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import pyNN.space as space
 from connector_functions import gabor_probability, lgn_to_cortical_connection, create_lgn_to_cortical
 from connector_functions import create_cortical_to_cortical_connection, create_thalamocortical_connection
-from analysis_functions import calculate_tuning
+from analysis_functions import calculate_tuning, visualize_conductances, visualize_conductances_and_voltage
+from analysis_functions import conductance_analysis
 from plot_functions import plot_spiketrains
 import cPickle
 
@@ -14,6 +15,45 @@ import cPickle
 #exec("import pyNN.%s as simulator" % simulator_name)
 import pyNN.nest as simulator
 #import pyNN.neuron as simulator
+
+#############################
+## Network and Simulation parameters
+#############################
+
+contrast = 0.50
+
+# Layer size and dimensions 
+
+Ncells_lgn = 30
+Ncell_exc = 40
+Ncell_inh = 20
+
+factor = 1.0
+Ncell_exc = int(factor * Ncell_exc)
+Ncell_inh = int(factor * Ncell_inh)
+
+
+N_lgn_layers = 1
+# If True add cortical excitatory feedback (e -> e) and ( e -> i ) 
+cortical_excitatory_feedback = False
+# If True add feedforward inhibition ( i -> e )  
+feed_forward_inhibition = True
+# If True add cortical noise 
+background_noise = True
+correlated_noise = False
+# If True create connections from the thalamus to the cortex
+thalamo_cortical_connections = True 
+
+# Simulation time
+t = 1000.0 
+# Set the random set for reproducibility
+seed = 1055
+np.random.seed(seed)
+
+# Has to be called at the beginning of the simulation
+#simulator.setup(timestep=0.1, min_delay=0.1, max_delay=5.0)
+simulator.setup(timestep=1, min_delay=1, max_delay=5.0)
+
 
 #############################
 # Load LGN spikes and positions
@@ -41,8 +81,7 @@ f1.close()
 ## Load the spikes 
 
 spikes_on = []
-spikes_off   = []
-N_lgn_layers = 4 
+spikes_off = []
 
 for layer in xrange(N_lgn_layers):
 
@@ -50,15 +89,17 @@ for layer in xrange(N_lgn_layers):
     layer = '_layer' + str(layer)
     
     polarity = '_on'
-    mark = 'spike_train'
-    spikes_filename = directory + mark + polarity + layer + format
+    contrast_mark = str(contrast)
+    mark = '_spike_train'
+    spikes_filename = directory + contrast_mark + mark + polarity + layer + format
     f2 = open(spikes_filename, 'rb')
     spikes_on.append(cPickle.load(f2))
     f2.close()
     
     polarity = '_off'
-    mark = 'spike_train'
-    spikes_filename = directory + mark + polarity + layer + format
+    contrast_mark = str(contrast)
+    mark = '_spike_train'
+    spikes_filename = directory + contrast_mark + mark + polarity + layer + format
     f2 = open(spikes_filename, 'rb')
     spikes_off.append(cPickle.load(f2))
     f2.close()
@@ -72,24 +113,6 @@ def spike_times_on(layer, spikes_on):
 
 def spike_times_off(layer, spike_off):
     return [simulator.Sequence(x) for x in spikes_off[layer]]
-
-#############################
-## Network and Simulation parameters
-#############################
-Ncells_lgn = 30
-Ncell_exc = 10
-Ncell_inh = 10
-#Ncell_exc = 40
-#Ncell_inh = 20
-
-t = 1000.0  # Simulation time
-
-# Set the random set for reproducibility
-seed = 1055
-np.random.seed(seed)
-
-# Has to be called at the beginning of the simulation
-simulator.setup(timestep=0.1, min_delay=0.1, max_delay=5.0)
 
 
 # Spatial structure of on LGN cells
@@ -202,63 +225,60 @@ cortical_neurons_inh = simulator.Population(Ncell_inh**2, inhibitory_cell, struc
 # Add background noise
 #############################
 
-correlated = False
 noise_rate = 5800  # Hz
 g_noise = 0.00089   # Microsiemens (0.89 Nanosiemens)
 noise_delay = 1  # ms
 noise_model = simulator.SpikeSourcePoisson(rate=noise_rate)
 noise_syn = simulator.StaticSynapse(weight=g_noise, delay=noise_delay)
 
+if background_noise:
 
-if correlated:
-    # If correlated is True all the cortical neurons receive noise from the same cell.
-    noise_population = simulator.Population(1, noise_model, label='Background Noise')
-    background_noise_to_exc = simulator.Projection(noise_population, cortical_neurons_exc,
-                                                   simulator.AllToAllConnector(), noise_syn)
-    background_noise_to_inh = simulator.Projection(noise_population, cortical_neurons_inh,
-                                                   simulator.AllToAllConnector(), noise_syn)
-else:
-    # If correlated is False, all cortical neurons receive independent noise
-    noise_population_exc = simulator.Population(Ncell_exc**2, noise_model, label='Background Noise to Exc')
-    noise_population_inh = simulator.Population(Ncell_inh**2, noise_model, label='Background Noise to Inh')
-    background_noise_to_exc = simulator.Projection(noise_population_exc, cortical_neurons_exc,
-                                                   simulator.OneToOneConnector(), noise_syn)
-    background_noise_to_inh = simulator.Projection(noise_population_inh, cortical_neurons_inh,
-                                                   simulator.OneToOneConnector(), noise_syn)
+    if correlated_noise:
+        # If correlated is True all the cortical neurons receive noise from the same cell.
+        noise_population = simulator.Population(1, noise_model, label='Background Noise')
+        background_noise_to_exc = simulator.Projection(noise_population, cortical_neurons_exc,
+                                                       simulator.AllToAllConnector(), noise_syn)
+        background_noise_to_inh = simulator.Projection(noise_population, cortical_neurons_inh,
+                                                       simulator.AllToAllConnector(), noise_syn)
+    else:
+        # If correlated is False, all cortical neurons receive independent noise
+        noise_population_exc = simulator.Population(Ncell_exc**2, noise_model, label='Background Noise to Exc')
+        noise_population_inh = simulator.Population(Ncell_inh**2, noise_model, label='Background Noise to Inh')
+        background_noise_to_exc = simulator.Projection(noise_population_exc, cortical_neurons_exc,
+                                                       simulator.OneToOneConnector(), noise_syn)
+        background_noise_to_inh = simulator.Projection(noise_population_inh, cortical_neurons_inh,
+                                                       simulator.OneToOneConnector(), noise_syn)
 
 #############################
 ## Thalamo-Cortical connections
 #############################
 
-#lgn_on_populations = [lgn_neurons_on_0, lgn_neurons_on_1, lgn_neurons_on_2, lgn_neurons_on_3]
-
-
-#lgn_off_populations = [lgn_neurons_off_0, lgn_neurons_off_1, lgn_neurons_off_2, lgn_neurons_off_3]
-
-
-
 # Sample random phases and orientations 
 
-phases_space = np.linspace(-180, 180, 20)
-orientation_space = np.linspace(-40, 40, 9)
+phases_space = np.linspace(-180, 180, 19)
+#orientation_space = np.linspace(0, 90, 10)
+#orientation_space = np.linspace(-90, 90, 19)
+orientation_space = np.linspace(-60, 60, 13)
 
 phases_exc = np.random.rand(Ncell_exc**2) * 360 * 0  # Phases continium
 #phases_exc = np.random.choice(phases_space, Ncell_exc*2) # Phases discrete
 
 orientations_exc = np.random.rand(Ncell_exc**2) * 180  # Orientations continium
-orientations_exc = np.random.choice(orientation_space, Ncell_exc**2)   # Orientations discrete
+orientations_exc = np.random.choice(orientation_space, Ncell_exc**2) * 1  # Orientations discrete
 #orientations_exc = np.linspace(-60, 60, Ncell_exc**2)  # Orientations ordered 
 
-phases_inh = np.random.rand(Ncell_inh**2) * 360 * 0 
+phases_inh = np.random.rand(Ncell_inh**2) * 360 * 0
+phases_inh = 180 - np.random.choice(phases_exc, Ncell_inh**2)
 #phases_inh = np.random.choice(phases_space, Ncell_inh*2) # Phases discrete
 
 #orientations_inh = np.random.rand(Ncell_inh**2) * np.pi
-orientations_inh = np.random.choice(orientation_space, Ncell_inh**2)  # Orientations discrete
+orientations_inh = np.random.choice(orientation_space, Ncell_inh**2) * 1  # Orientations discrete
+#orientations_inh = np.random.choice(orientations_exc, Ncell_inh**2) # Sample from the orientaitons of excitatory cells
 
 w = 0.8  # Spatial frequency
 gamma = 1  # Aspect ratio
 sigma = 1  # Decay ratio
-g_exc = 0.00098  # microsiemens 
+g_exc = (4.0 / N_lgn_layers) * 0.00098  # microsiemens
 n_pick = 3  # Number of times to sample
 
 polarity_on = 1
@@ -266,8 +286,8 @@ polarity_off = -1
 
 
 
-if True:
-    # Create the connections 
+if thalamo_cortical_connections:
+    # Create thalamo-cortical connections 
     for on_population, off_population in zip(lgn_on_populations, lgn_off_populations):
 
         create_thalamocortical_connection(on_population, cortical_neurons_exc, polarity_on, n_pick, g_exc, 
@@ -290,16 +310,15 @@ if True:
 
 n_pick = 10
 
-orientation_sigma = 10   # Grades
-phase_sigma = 10  # Grades
-g_inh = 0.0083  # Nanosiemens 
+orientation_sigma = 20   # Grades
+phase_sigma = 20  # Grades
+g_inh = 0.00083 * (3 / factor)  # Nanosiemens
 
-# If true add cortical excitatory feedback (e -> e) and ( e -> i ) 
-cortical_excitatory_feedback = False 
+
 
 ## We create inhibitory feed-forward connections ( i -> e)   
 
-if False:
+if feed_forward_inhibition:
 # Create list of connections 
     cortical_inh_exc_connections = create_cortical_to_cortical_connection(cortical_neurons_inh, cortical_neurons_exc,
                                                                           orientations_inh, phases_inh, orientations_exc,
@@ -344,8 +363,9 @@ if cortical_excitatory_feedback:
 # Recordings
 #############################
 
-cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh', 'v', 'spikes'])
-#cortical_neurons_inh.record(['gsyn_exc', 'gsyn_inh', 'v', 'spikes'])
+cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh','v', 'spikes'])
+#cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh','v', 'spikes'])
+cortical_neurons_inh.record(['gsyn_exc', 'gsyn_inh', 'v', 'spikes'])
 #cortical_neurons_exc.record('spikes', 'v')
 
 #############################
@@ -362,22 +382,23 @@ simulator.end()
 data = cortical_neurons_exc.get_data()  # Creates a Neo Block
 segment = data.segments[0]  # Takes the first segment
 
+data = cortical_neurons_inh.get_data()
+segment2 = data.segments[0]
 
 ## Show conductances 
 
-if True:
-    gexc = segment.analogsignalarrays[0]
-    ginh = segment.analogsignalarrays[1]
-    v = segment.analogsignalarrays[2]
-    
-    neuron = (orientations_exc == 0)
-    plt.subplot(1, 2, 1)
-    plt.plot(gexc.times, gexc[:,neuron], label='exc')
-    plt.plot(ginh.times, ginh[:, neuron], label='inh')
-     
-    plt.subplot(1, 2, 2)
-    plt.plot(v.times, v[:,neuron], label='v')
-     
+
+test_orientation = orientations_exc[0]
+test_orientation = 0
+neurons = (orientations_exc == test_orientation)
+print 'test orientation', test_orientation
+#visualize_conductances_and_voltage(segment, neurons)
+
+
+if False:
+    DC, F1 = conductance_analysis(cortical_neurons_exc, segment, orientation_space)
+    plt.plot(orientation_space, DC, label='DC')
+    plt.plot(orientation_space, DC + F1, label='DC + F1')
     plt.legend()
     plt.show()
 
@@ -385,29 +406,33 @@ if True:
 # Extract the orientation dependence
 #############################
 
-def calculate_tuning(population, population_orientations, orientation_space):
-    """
-    Calculates and plots the mean rate of the cells in population as a function 
-    of its orientations. The orientation_space is the space from where the orientations where 
-    sampled 
-    """
-    mean_rate = np.zeros(orientation_space.size)
-    
-    for index, orientation in enumerate(orientation_space):
-        mean_rate[index] = population[population_orientations == orientation].mean_spike_count()
-    
-    return mean_rate
 
-rate = calculate_tuning(cortical_neurons_exc, orientations_exc, orientation_space)
+if True:
+    visualize_conductances(segment, neurons)
+    plt.show()
 
-plt.plot(orientation_space, rate)
-plt.show()
-rate = calculate_tuning(cortical_neurons_exc, orientations_exc, orientation_space)
 
-plot_spiketrains(segment)
-plt.show()
+    rate = calculate_tuning(cortical_neurons_exc, orientations_exc, orientation_space)
+
+    plt.plot(orientation_space, rate)
+    plt.xlabel('Orientation')
+    plt.ylabel('Firing Rate')
+    plt.show()
+
+
+if True:  # Spikes analysis
+
+    plt.subplot(2, 1, 1)
+
+    plot_spiketrains(segment)
+
+    plt.subplot(2, 1, 2)
+    plot_spiketrains(segment2)
+
+    plt.show()
+
+
 save = False
-
 folder ='./output_data/'
 voltage = '_v'
 excitation = '_g_exc'
@@ -416,7 +441,7 @@ format = '.pickle'
 
 filename_voltage = folder + voltage + format 
 filename_excitation = folder + excitation + format  
-filename_voltage = folder + excitation  + format 
+filename_voltage = folder + excitation + format
 
 
 if save:

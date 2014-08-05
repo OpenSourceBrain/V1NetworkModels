@@ -25,7 +25,7 @@ kernel_duration = 150  # ms
 kernel_size = int(kernel_duration / dt_kernel)
 
 # Simulation time duration
-T_simulation = 10 * 10 ** 3.0  # ms
+T_simulation = 1 * 10 ** 3.0  # ms
 remove_start = int(kernel_size * dt_kernel)
 T_simulation += remove_start  # Add the size of the kernel
 Nt_simulation = int(T_simulation / dt)  # Number of simulation points
@@ -49,7 +49,7 @@ K = 0.8  # Cycles per degree
 Phi = 0 * np.pi # Phase of the pattern 
 Theta = 0 * np.pi # Orientation of the pattern
 max_contrast = 2.4 * 2 
-contrast = 0.5  # Percentage
+contrast = 0.25  # Percentage
 A = contrast * max_contrast
 # Temporal frequency of sine grating
 w = 3  # Hz
@@ -141,7 +141,7 @@ for layer in xrange(number_of_layers):
     # Save the file
     folder = './data/'
     format = '.cpickle'
-    output_filename = folder + 'spike_train_on_layer' + str(layer) + format
+    output_filename = folder + str(contrast) + '_spike_train_on_layer' + str(layer) + format
     output_filename2 = folder +  'positions_on_layer' + str(layer) + format
     
     # Save spike train

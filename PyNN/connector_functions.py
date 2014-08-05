@@ -27,16 +27,36 @@ def gabor_probability(x, y, sigma, gamma, phi, w, theta, xc=0, yc=0):
     y = y - yc
 
     # Rotate
-    x = np.cos(theta) * x + np.sin(theta) * y
+    aux1 = np.cos(theta) * x + np.sin(theta) * y
     y = -np.sin(theta) * x + np.cos(theta) * y
 
+    x = aux1
+
     # Function
-    exp_part = np.exp(-(x**2 + (gamma * y)**2)/(2 * sigma**2))
+    r = x**2 + (gamma * y) ** 2
+    exp_part = np.exp(- r / (2 * sigma**2))
     cos_part = np.cos(2 * np.pi * w * x + phi)
 
     return exp_part * cos_part
 
-def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, n_pick, g_exc, polarity, sigma,
+def create_thalamocortical_connection(source, target, polarity, n_pick, g, sigma, gamma, w, phases, orientations, simulator):
+    """
+    Creates a conection from a layer in the thalamus to a layer in the cortex through the mechanism of gabor sampling
+    """
+
+    # Produce a list with the connections
+    connections_list = create_lgn_to_cortical(source, target, polarity, n_pick, g, sigma, gamma, phases, w, orientations)
+
+    # Transform it into a connector
+    connector = simulator.FromListConnector(connections_list, column_names=["weight", "delay"])
+
+    # Create the excitatory and inhibitory projections
+    simulator.Projection(source, target, connector, receptor_type='excitatory')
+    simulator.Projection(source, target, connector, receptor_type='inhibitory')
+
+
+
+def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, n_pick, g, polarity, sigma,
                                gamma, phi, w, theta, x_cortical, y_cortical):
     """
     Creates connections from the LGN to the cortex with a Gabor profile.
@@ -57,7 +77,7 @@ def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, 
             probability = polarity * gabor_probability(x, y, sigma, gamma, phi, w, theta, x_cortical, y_cortical)
             probability = np.sum(np.random.rand(n_pick) < probability)  # Samples
 
-            synaptic_weight = (g_exc / n_pick) * probability
+            synaptic_weight = (g / n_pick) * probability
             lgn_neuron_index = lgn_neurons.id_to_index(lgn_neuron)
 
             # The format of the connector list should be pre_neuron, post_neuron, w, tau_delay
@@ -65,7 +85,7 @@ def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, 
                 connections.append((lgn_neuron_index, cortical_neuron_index, synaptic_weight, 0.1))
 
 
-def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pick, g_exc, sigma, gamma, phases,
+def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pick, g, sigma, gamma, phases,
                            w, orientations):
     """
     Creates the connection from the lgn population to the cortical population with a gabor profile
@@ -84,10 +104,15 @@ def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pic
         phi = phases[cortical_neuron_index]
 
         # Create the connections from lgn to cortical_neuron
-        lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g_exc, polarity, sigma,
-                                   gamma, phi, w, theta, x_cortical, y_cortical)
+        #lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g, polarity, sigma,
+        #gamma, phi, w, theta, x_cortical, y_cortical)
+        
+        lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g, polarity, sigma,
+                                   gamma, phi, w, theta, 0, 0)
 
     return connections
+
+
 
 
 def cortical_to_cortical_connection(target_neuron_index, connections, source_population, n_pick, g, source_orientations,
@@ -109,7 +134,7 @@ def cortical_to_cortical_connection(target_neuron_index, connections, source_pop
         if target_type:
             phase_distance = circular_dist(target_neuron_phase, source_neuron_phase, 360)
         else:
-            phase_distance = np.pi - circular_dist(target_neuron_phase, source_neuron_phase, 360)
+            phase_distance = 180 - circular_dist(target_neuron_phase, source_neuron_phase, 360)
 
         # Now calculate the gaussian function
         or_gauss = normal_function(or_distance, mean=0, sigma=orientation_sigma)
@@ -127,6 +152,8 @@ def cortical_to_cortical_connection(target_neuron_index, connections, source_pop
         if synaptic_weight > 0:
                     connections.append((source_neuron_index, target_neuron_index, synaptic_weight, 0.1))
 
+
+    return connections
 
 def create_cortical_to_cortical_connection(source_population, target_population, source_orientations, source_phases,
                                            target_orientations, target_phases, orientation_sigma, phase_sigma,
@@ -153,21 +180,7 @@ def create_cortical_to_cortical_connection(source_population, target_population,
     return connections
 
 
-def create_thalamocortical_connection(source, target, polarity, n_pick, g, sigma, gamma, w, phases, orientations, simulator):
-    """
-    Creates a conection from a layer in the thalamus to a layer in the cortex through the mechanism of gabor sampling 
-    """
-    
-    # Produce a list with the connections 
-    connections_list = create_lgn_to_cortical(source, target, polarity, n_pick, g, sigma, gamma, phases, w, orientations)
-    
-    # Transform it into a connector 
-    connector = simulator.FromListConnector(connections_list, column_names=["weight", "delay"])
-    
-    # Create the excitatory and inhibitory projections 
-    simulator.Projection(source, target, connector, receptor_type='excitatory')
-    simulator.Projection(source, target, connector, receptor_type='inhibitory')
-    
+
 
 def calculate_correlations_to_cell(x_position, y_position, x_values, y_values,
                                    lx, dx, ly, dy, sigma_center, sigma_surround):

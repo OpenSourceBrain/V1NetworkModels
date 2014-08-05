@@ -59,7 +59,7 @@ f2 = open(spikes_filename, 'rb')
 spikes_off_0 = cPickle.load(f2)
 f2.close()
 
-#  Layer 1  
+#  Layer 0
 layer = '_layer' + str(1)
 
 polarity = '_on'

@@ -29,19 +29,21 @@ def gabor_kernel(lx, dx, ly, dy, sigma, gamma, phi, w, theta, xc=0, yc=0):
     # Translate
     x -= xc
     y -= yc
-    
+
     X, Y = np.meshgrid(x, y)
-    
-    X = np.cos(theta) * X + np.sin(theta) * Y
-    Y = - np.sin(theta) * X + np.cos(theta) * Y
-    
+
+    aux = np.cos(theta) * X + np.sin(theta) * Y
+    Y = -np.sin(theta) * X + np.cos(theta) * Y
+
+    X = aux
+
     exp_part = np.exp(-(X**2 + (gamma * Y)**2)/(2 * sigma**2))
     cos_part = np.cos(2 * np.pi * w * X + phi)
 
     return exp_part * cos_part
 
 
-def spatial_kernel(lx, dx, ly, dy, sigma_center, sigma_surround, inverse=1, x_tra=0, y_tra=0):
+def spatial_kernel(lx, dx, ly, dy, sigma_center, sigma_surround, inverse=1, x_tra=0, y_tra=0, theta = 0):
     """
     The spatial component of the kernel. A difference of gaussian'
     
@@ -56,12 +58,22 @@ def spatial_kernel(lx, dx, ly, dy, sigma_center, sigma_surround, inverse=1, x_tr
     x_tra, y_tra : linear translation of the x and y coordinates respectively
     
     """
+    transforms_to_radians = np.pi / 180
+    theta *= transforms_to_radians  # Transforms to radians
+
     # Create the positions
     x = np.arange(-lx/2, lx/2, dx)
     y = np.arange(-ly/2, ly/2, dy)
-    # Create a x,y plane 
+
+    # Create a x,y plane
     X, Y = np.meshgrid(x, y)
-    # Calculate function 
+
+    aux = np.cos(theta) * X + np.sin(theta) * Y
+    Y = -np.sin(theta) * X + np.cos(theta) * Y
+
+    X = aux
+
+    # Calculate function
     R = np.sqrt((X - x_tra)**2 + (Y - y_tra)**2)  
     center = (17.0 / sigma_center**2) * np.exp(-(R / sigma_center)**2)
     surround = (16.0 / sigma_surround**2) * np.exp(-(R / sigma_surround)**2)

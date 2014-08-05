@@ -98,3 +98,67 @@ def calculate_tuning(population, population_orientations, orientation_space):
         mean_rate[index] = population[population_orientations == orientation].mean_spike_count()
     
     return mean_rate
+
+
+def visualize_conductances_and_voltage(segment, neurons):
+    """
+    Simple functions to visualize the conductances and the voltage for the neurons
+    """
+
+    gexc = segment.analogsignalarrays[0]
+    ginh = segment.analogsignalarrays[1]
+    v = segment.analogsignalarrays[2]
+
+    plt.subplot(1, 2, 1)
+    plt.plot(gexc.times, gexc[:, neurons], label='exc')
+    plt.plot(ginh.times, ginh[:, neurons], label='inh')
+    plt.legend()
+
+    plt.subplot(1, 2, 2)
+    plt.plot(v.times, v[:,neurons], label='v')
+
+    plt.legend()
+    plt.show()
+
+
+def visualize_conductances(segment, neurons):
+    """
+    Visualize both the excitatory and inhibitory conductances of the neurons array
+    """
+
+    gexc = segment.analogsignalarrays[0]
+    ginh = segment.analogsignalarrays[1]
+
+    plt.subplot(2, 1, 1)
+    plt.plot(gexc.times, gexc[:,neurons], label='exc')
+    plt.legend()
+
+    plt.subplot(2, 1, 2)
+    plt.plot(ginh.times, ginh[:, neurons], label='inh')
+    plt.legend()
+
+    plt.show()
+
+
+def conductance_analysis(population, segment, orientation_space):
+    """
+    Plots DC and F1 for the conductance with respect to the orientation of the neurons
+    in population
+    """
+
+    neuron_with_orientation = np.zeros(orientation_space.size)
+
+    for index, orientation in enumerate(orientation_space):
+        aux = np.where(orientations_exc == orientation)[0][0]
+        neuron_with_orientation[index] = population.id_to_index(population[aux])
+
+    g_exc = segment.analogsignalarrays[0]
+
+    F1 = np.zeros(orientation_space.size)
+    DC = np.zeros(orientation_space.size)
+
+    for index, neuron in enumerate(neuron_with_orientation):
+        DC[index] = np.mean(g_exc[:, neuron])
+        F1[index] = np.max(np.array(g_exc[:, neuron]) - DC[index])
+
+    return DC, F1
