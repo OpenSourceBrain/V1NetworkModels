@@ -2,6 +2,91 @@ import numpy as np
 from scipy.stats.stats import pearsonr
 from kernel_functions import spatial_kernel
 from misc_functions import circular_dist, normal_function
+import cPickle
+
+##############################################################
+# LGN related functions
+##############################################################
+
+
+def load_positions():
+
+    directory = './data/'
+    format = '.cpickle'
+
+    ## Load space
+    layer = '_layer' + str(0)
+
+    polarity = '_on'
+    mark = 'positions'
+    positions_filename = directory + mark + polarity + layer + format
+    f1 = open(positions_filename, "rb")
+    positions_on = cPickle.load(f1)
+    f1.close()
+
+    polarity = '_off'
+    mark = 'positions'
+    positions_filename = directory + mark + polarity + layer + format
+    f1 = open(positions_filename, "rb")
+    positions_off = cPickle.load(f1)
+    f1.close()
+
+    return positions_on, positions_off
+
+def load_lgn_spikes(contrast, number_of_lgn_layers):
+    """
+    Returns a list with the spikes associated to the on-center and off-center cells in the lgn respectively
+    """
+
+    directory = './data/'
+    format = '.cpickle'
+
+    spikes_on = []
+    spikes_off = []
+
+    for layer in xrange(number_of_lgn_layers):
+
+        #  Layer 1
+        layer = '_layer' + str(layer)
+
+        polarity = '_on'
+        contrast_mark = str(contrast)
+        mark = '_spike_train'
+        spikes_filename = directory + contrast_mark + mark + polarity + layer + format
+        f2 = open(spikes_filename, 'rb')
+        spikes_on.append(cPickle.load(f2))
+        f2.close()
+
+        polarity = '_off'
+        contrast_mark = str(contrast)
+        mark = '_spike_train'
+        spikes_filename = directory + contrast_mark + mark + polarity + layer + format
+        f2 = open(spikes_filename, 'rb')
+        spikes_off.append(cPickle.load(f2))
+        f2.close()
+
+    return spikes_on, spikes_off
+
+
+def return_lgn_starting_coordinates(lgn_positions, Nside_lgn):
+    """
+    Given one file with the positions returns x0, y0, dx, dy
+    """
+
+    x0, y0 = lgn_positions[0] # Take out the lower corner from the positions
+    x_end, y_end = lgn_positions[-1]
+    x1, dummy = lgn_positions[Nside_lgn]
+    dummy, y1 = lgn_positions[1]
+    dx = x1 - x0
+    dy = y1 - y0
+
+    return x0, y0, dx, dy
+
+
+##############################################################
+# Thalamo-Cortical connections
+##############################################################
+
 
 def gabor_probability(x, y, sigma, gamma, phi, w, theta, xc=0, yc=0):
 
@@ -39,13 +124,14 @@ def gabor_probability(x, y, sigma, gamma, phi, w, theta, xc=0, yc=0):
 
     return exp_part * cos_part
 
-def create_thalamocortical_connection(source, target, polarity, n_pick, g, sigma, gamma, w, phases, orientations, simulator):
+
+def create_thalamocortical_connection(source, target, polarity, n_pick, g, delay, sigma, gamma, w, phases, orientations, simulator):
     """
     Creates a conection from a layer in the thalamus to a layer in the cortex through the mechanism of gabor sampling
     """
 
     # Produce a list with the connections
-    connections_list = create_lgn_to_cortical(source, target, polarity, n_pick, g, sigma, gamma, phases, w, orientations)
+    connections_list = create_lgn_to_cortical(source, target, polarity, n_pick, g, delay, sigma, gamma, phases, w, orientations)
 
     # Transform it into a connector
     connector = simulator.FromListConnector(connections_list, column_names=["weight", "delay"])
@@ -55,8 +141,7 @@ def create_thalamocortical_connection(source, target, polarity, n_pick, g, sigma
     simulator.Projection(source, target, connector, receptor_type='inhibitory')
 
 
-
-def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, n_pick, g, polarity, sigma,
+def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, n_pick, g, delay, polarity, sigma,
                                gamma, phi, w, theta, x_cortical, y_cortical):
     """
     Creates connections from the LGN to the cortex with a Gabor profile.
@@ -82,10 +167,10 @@ def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, 
 
             # The format of the connector list should be pre_neuron, post_neuron, w, tau_delay
             if synaptic_weight > 0:
-                connections.append((lgn_neuron_index, cortical_neuron_index, synaptic_weight, 0.1))
+                connections.append((lgn_neuron_index, cortical_neuron_index, synaptic_weight, delay))
 
 
-def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pick, g, sigma, gamma, phases,
+def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pick, g, delay,  sigma, gamma, phases,
                            w, orientations):
     """
     Creates the connection from the lgn population to the cortical population with a gabor profile
@@ -107,15 +192,41 @@ def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pic
         #lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g, polarity, sigma,
         #gamma, phi, w, theta, x_cortical, y_cortical)
         
-        lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g, polarity, sigma,
+        lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g, delay, polarity, sigma,
                                    gamma, phi, w, theta, 0, 0)
 
     return connections
 
+##############################################################
+# Intra-cortical connections
+##############################################################
 
 
+def create_cortical_to_cortical_connection(source_population, target_population, source_orientations, source_phases,
+                                           target_orientations, target_phases, orientation_sigma, phase_sigma,
+                                           g, delay,  n_pick, target_type_excitatory=True):
+    """
+    Creates the connections from source population to target population in the cortex.
+    """
+    print 'Creating connection from ' + source_population.label + ' to ' + target_population.label
+    connections = []
 
-def cortical_to_cortical_connection(target_neuron_index, connections, source_population, n_pick, g, source_orientations,
+    for target_neuron in target_population:
+
+        # Extract targe parameters
+        target_neuron_index = target_population.id_to_index(target_neuron)
+        target_neuron_orientation = target_orientations[target_neuron_index]
+        target_neuron_phase = target_phases[target_neuron_index]
+
+        # Create the connection from source to target_neuron
+        cortical_to_cortical_connection(target_neuron_index, connections, source_population, n_pick, g, delay,
+                                        source_orientations, source_phases, orientation_sigma, phase_sigma,
+                                        target_neuron_orientation, target_neuron_phase, target_type=target_type_excitatory)
+
+    return connections
+
+
+def cortical_to_cortical_connection(target_neuron_index, connections, source_population, n_pick, g, delay, source_orientations,
                                     source_phases, orientation_sigma, phase_sigma, target_neuron_orientation,
                                     target_neuron_phase, target_type):
     """
@@ -149,37 +260,11 @@ def cortical_to_cortical_connection(target_neuron_index, connections, source_pop
         probability = np.sum(np.random.rand(n_pick) < probability)  # Samples
         synaptic_weight = (g / n_pick) * probability
 
+
         if synaptic_weight > 0:
-                    connections.append((source_neuron_index, target_neuron_index, synaptic_weight, 0.1))
-
-
-    return connections
-
-def create_cortical_to_cortical_connection(source_population, target_population, source_orientations, source_phases,
-                                           target_orientations, target_phases, orientation_sigma, phase_sigma,
-                                           g, n_pick, target_type_excitatory=True):
-    """
-    Creates the connections from source population to target population in the cortex.
-    """
-    print 'Creating connection from ' + source_population.label + ' to ' + target_population.label
-    connections = []
-
-    for target_neuron in target_population:
-
-        # Extract targe parameters
-        target_neuron_index = target_population.id_to_index(target_neuron)
-        target_neuron_orientation = target_orientations[target_neuron_index]
-        target_neuron_phase = target_phases[target_neuron_index]
-
-        # Create the connection from source to target_neuron
-        cortical_to_cortical_connection(target_neuron_index, connections, source_population, n_pick, g,
-                                        source_orientations, source_phases, orientation_sigma, phase_sigma,
-                                        target_neuron_orientation, target_neuron_phase, target_type=target_type_excitatory)
-
+                    connections.append((source_neuron_index, target_neuron_index, synaptic_weight, delay))
 
     return connections
-
-
 
 
 def calculate_correlations_to_cell(x_position, y_position, x_values, y_values,

@@ -59,4 +59,5 @@ def circular_dist(a, b, period):
     """
     Returns the distance between a and b (scalars) in a domain with `period` period.
     """
-    return  np.minimum(np.abs(a - b), period - np.abs(a - b))
+    return np.minimum(np.abs(a - b), period - np.abs(a - b))
+

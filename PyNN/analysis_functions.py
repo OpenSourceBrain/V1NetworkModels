@@ -86,7 +86,7 @@ def produce_spikes(firing_rate, dt, T_simulation, remove_start):
     return spike_times
 
 
-def calculate_tuning(population, population_orientations, orientation_space):
+def calculate_tuning(population, population_orientations, orientation_space, simtime):
     """
     Calculates and plots the mean rate of the cells in population as a function 
     of its orientations. The orientation_space is the space from where the orientations where 
@@ -95,7 +95,7 @@ def calculate_tuning(population, population_orientations, orientation_space):
     mean_rate = np.zeros(orientation_space.size)
     
     for index, orientation in enumerate(orientation_space):
-        mean_rate[index] = population[population_orientations == orientation].mean_spike_count()
+        mean_rate[index] = population[population_orientations == orientation].mean_spike_count() * (1000.0/simtime)
     
     return mean_rate
 
@@ -140,7 +140,7 @@ def visualize_conductances(segment, neurons):
     plt.show()
 
 
-def conductance_analysis(population, segment, orientation_space):
+def conductance_analysis(population, segment, orientation_space, population_orientations):
     """
     Plots DC and F1 for the conductance with respect to the orientation of the neurons
     in population
@@ -149,7 +149,7 @@ def conductance_analysis(population, segment, orientation_space):
     neuron_with_orientation = np.zeros(orientation_space.size)
 
     for index, orientation in enumerate(orientation_space):
-        aux = np.where(orientations_exc == orientation)[0][0]
+        aux = np.where(population_orientations == orientation)[0][0]
         neuron_with_orientation[index] = population.id_to_index(population[aux])
 
     g_exc = segment.analogsignalarrays[0]
