@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats.stats import pearsonr
-from kernel_functions import spatial_kernel
+from kernel_functions import spatial_kernel, gabor_kernel
 from misc_functions import circular_dist, normal_function
 import cPickle
 
@@ -301,3 +301,86 @@ def calculate_correlations_to_cell(x_position, y_position, x_values, y_values,
             values[counter_aux] = pearsonr(Z1.flat, Z2.flat)[0]
             counter_aux += 1
     return values
+
+
+##############################################################
+# Intra-cortical connections Gabor Correlation
+##############################################################
+
+
+def create_cortical_to_cortical_connection_corr(source_population, target_population, source_orientations, source_phases,
+                                           target_orientations, target_phases, orientation_sigma, phase_sigma, g, delay,
+                                           n_pick, target_type_excitatory=True):
+    """
+    Creates the connections from source population to target population in the cortex.
+    """
+    print 'Creating connection from ' + source_population.label + ' to ' + target_population.label
+    connections = []
+
+    # Gabor parameters
+    w = 0.8
+    gamma = 1  # Aspect ratio
+    sigma = 1
+    # Space parameters
+    dx = 0.1
+    lx = 6.0
+    dy = 0.1
+    ly = 6.0
+
+    for target_neuron in target_population:
+
+        # Extract target
+        x_target, y_target = target_neuron.position[0:2]
+        target_neuron_index = target_population.id_to_index(target_neuron)
+        target_neuron_orientation = target_orientations[target_neuron_index]
+        target_neuron_phase = target_phases[target_neuron_index]
+
+        #Z1 = gabor_kernel(lx, dx, ly, dy, sigma, gamma, target_neuron_phase, w,
+        #                  target_neuron_orientation, x_target, y_target)
+
+        Z1 = gabor_kernel(lx, dx, ly, dy, sigma, gamma, target_neuron_phase, w,
+                          target_neuron_orientation, 0, 0 )
+
+        # Create the connection from source to target_neuron
+        cortical_to_cortical_connection_corr(target_neuron_index, connections, source_population, n_pick, g, delay,
+                                        source_orientations, source_phases, target_neuron_orientation,
+                                        target_neuron_phase, Z1, lx, dx, ly, dy, sigma, gamma, w,
+                                        target_type=target_type_excitatory)
+
+    return connections
+
+
+def cortical_to_cortical_connection_corr(target_neuron_index, connections, source_population, n_pick, g, delay,
+                                    source_orientations, source_phases, target_neuron_orientation, target_neuron_phase,
+                                    Z1, lx, dx, ly, dy, sigma, gamma, w, target_type):
+    """
+    Creates the connections from the source population to the target neuron
+
+    """
+    for source_neuron in source_population:
+        # Extract index, orientation and phase of the target
+        x_source, y_source = source_neuron.position[0:2]
+        source_neuron_index = source_population.id_to_index(source_neuron)
+        source_neuron_orientation = source_orientations[source_neuron_index]
+        source_neuron_phase = source_phases[source_neuron_index]
+
+        #Z2 = gabor_kernel(lx, dx, ly, dy, sigma, gamma, source_neuron_phase, w, source_neuron_orientation,
+        #                  x_source, y_source)
+
+        Z2 = gabor_kernel(lx, dx, ly, dy, sigma, gamma, source_neuron_phase, w, source_neuron_orientation,
+                          0, 0)
+
+        if target_type:
+            probability = pearsonr(Z1.flat, Z2.flat)[0]
+        else:
+            probability = (-1) * pearsonr(Z1.flat, Z2.flat)[0]
+
+        probability = np.sum(np.random.rand(n_pick) < probability)  # Samples
+        synaptic_weight = (g / n_pick) * probability
+
+
+        if synaptic_weight > 0:
+                    connections.append((source_neuron_index, target_neuron_index, synaptic_weight, delay))
+
+    return connections
+

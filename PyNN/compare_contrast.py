@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 folder ='./output_data/'
 orientation = '_orientation'
 
-contrasts = [0.25, 0.50]
+contrasts = [0.25, 0.35, 0.50]
 
 for contrast in contrasts:
 

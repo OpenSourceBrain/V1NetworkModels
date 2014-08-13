@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from connector_functions import load_positions, load_lgn_spikes, return_lgn_starting_coordinates
 import pyNN.space as space
 from connector_functions import create_cortical_to_cortical_connection
+from connector_functions import create_cortical_to_cortical_connection_corr
 from connector_functions import create_thalamocortical_connection
 from analysis_functions import calculate_tuning, visualize_conductances, visualize_conductances_and_voltage
 from analysis_functions import conductance_analysis
@@ -25,7 +26,7 @@ timer = Timer()
 
 # ============== Network and simulation parameters =================
 
-contrast = 0.5  # Contrast used (possible range available in ./data)
+contrast = 0.35  # Contrast used (possible range available in ./data)
 
 Nside_lgn = 30  # N_lgn x N_lgn is the size of the LGN
 Nside_exc = 40  # N_exc x N_exc is the  size of the cortical excitatory layer
@@ -139,7 +140,7 @@ t_m_inh = C_inh / g_leak_inh  # Membrane time constant
 
 # Has to be called at the beginning of the simulation
 #simulator.setup(timestep=0.1, min_delay=0.1, max_delay=5.0)
-simulator.setup(timestep=1, min_delay=1, max_delay=5.0)
+simulator.setup(timestep=1.0, min_delay=1.0, max_delay=5.0)
 
 # ============= Cortical connections' parameters =======
 
@@ -330,7 +331,6 @@ if cortical_excitatory_feedback:
 #############################
 
 cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh','v', 'spikes'])
-#cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh','v', 'spikes'])
 cortical_neurons_inh.record(['gsyn_exc', 'gsyn_inh', 'v', 'spikes'])
 #cortical_neurons_exc.record('spikes', 'v')
 
@@ -369,8 +369,6 @@ test_orientation = 0
 neurons = (orientations_exc == test_orientation)
 
 # ============== Plot conductance analysis =================
-
-
 
 if plot_conductance_analysis:
     DC, F1 = conductance_analysis(cortical_neurons_exc, segment, orientation_space, orientations_exc)
