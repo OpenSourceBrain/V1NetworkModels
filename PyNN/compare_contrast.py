@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 folder ='./output_data/'
 orientation = '_orientation'
 
-contrasts = [0.25, 0.35, 0.50]
+contrasts = [0.25, 0.35, 0.45, 0.50]
 
 for contrast in contrasts:
 
@@ -16,7 +16,7 @@ for contrast in contrasts:
     orientations = data[0,:]
     rates = data[1, :]
 
-    plt.plot(orientations, rates, label=str(contrast))
+    plt.plot(orientations, rates, label=str(contrast * 100))
     plt.xlabel('Degrees')
     plt.ylabel('Firing rate (Hz)')
 

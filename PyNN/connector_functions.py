@@ -15,23 +15,22 @@ def load_positions():
     format = '.cpickle'
 
     ## Load space
-    layer = '_layer' + str(0)
-
     polarity = '_on'
     mark = 'positions'
-    positions_filename = directory + mark + polarity + layer + format
+    positions_filename = directory + mark + polarity + format
     f1 = open(positions_filename, "rb")
     positions_on = cPickle.load(f1)
     f1.close()
 
     polarity = '_off'
     mark = 'positions'
-    positions_filename = directory + mark + polarity + layer + format
+    positions_filename = directory + mark + polarity + format
     f1 = open(positions_filename, "rb")
     positions_off = cPickle.load(f1)
     f1.close()
 
     return positions_on, positions_off
+
 
 def load_lgn_spikes(contrast, number_of_lgn_layers):
     """
