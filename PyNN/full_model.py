@@ -9,7 +9,6 @@ from connector_functions import create_thalamocortical_connection
 from analysis_functions import calculate_tuning, visualize_conductances, visualize_conductances_and_voltage
 from analysis_functions import conductance_analysis
 from plot_functions import plot_spiketrains
-import cPickle
 
 #############################
 
@@ -26,7 +25,7 @@ timer = Timer()
 
 # ============== Network and simulation parameters =================
 
-contrast = 0.35  # Contrast used (possible range available in ./data)
+contrast = 0.50  # Contrast used (possible range available in ./data)
 
 Nside_lgn = 30  # N_lgn x N_lgn is the size of the LGN
 Nside_exc = 40  # N_exc x N_exc is the  size of the cortical excitatory layer
@@ -41,15 +40,13 @@ Ncell_exc = Nside_exc ** 2
 Ncell_inh = Nside_inh ** 2
 
 N_lgn_layers = 1
-# If True add cortical excitatory feedback (e -> e) and ( e -> i )
-cortical_excitatory_feedback = False
-# If True add feed-forward inhibition ( i -> e )
-feed_forward_inhibition = True
-# If True add cortical noise
-background_noise = True
-correlated_noise = False
-# If True create connections from the thalamus to the cortex
-thalamo_cortical_connections = True
+
+## Main connections
+thalamo_cortical_connections = True # If True create connections from the thalamus to the cortex
+feed_forward_inhibition = True # If True add feed-forward inhibition ( i -> e )
+cortical_excitatory_feedback = True # If True add cortical excitatory feedback (e -> e) and ( e -> i )
+background_noise = True  # If True add cortical noise
+correlated_noise = False  # Makes the noise coorelated
 
 # Save
 save_voltage_and_conductances = False
@@ -66,6 +63,12 @@ t = 1000.0
 seed = 1055
 np.random.seed(seed)
 
+dt = 1.0  # Simulation's time step
+delay_min = 1.0  # Minimum delay
+delay_max = 5.0  # Maximum delay
+
+# Has to be called at the beginning of the simulation
+simulator.setup(timestep=dt, min_delay=delay_min, max_delay=delay_max)
 
 # ============== Parameters of the thalamo-cortical connection =============
 
@@ -138,9 +141,6 @@ v_reset_inh = -57.8  # mV
 t_refrac_inh = 1.0  # ms
 t_m_inh = C_inh / g_leak_inh  # Membrane time constant
 
-# Has to be called at the beginning of the simulation
-#simulator.setup(timestep=0.1, min_delay=0.1, max_delay=5.0)
-simulator.setup(timestep=1.0, min_delay=1.0, max_delay=5.0)
 
 # ============= Cortical connections' parameters =======
 
@@ -167,11 +167,8 @@ spikes_on, spikes_off = load_lgn_spikes(contrast, N_lgn_layers)
 
 # Spike functions
 
-def spike_times_on(simulator, layer, spikes_file):
+def spike_times(simulator, layer, spikes_file):
     return [simulator.Sequence(x) for x in spikes_file[layer]]
-
-def spike_times_off(simulator, layer, spike_off):
-    return [simulator.Sequence(x) for x in spikes_off[layer]]
 
 
 # Spatial structure of on LGN cells
@@ -191,12 +188,12 @@ lgn_spikes_off_models = []
 
 
 for layer in xrange(N_lgn_layers):
-    model = simulator.SpikeSourceArray(spike_times=spike_times_on(simulator, layer, spikes_on))
+    model = simulator.SpikeSourceArray(spike_times=spike_times(simulator, layer, spikes_on))
     lgn_spikes_on_models.append(model)
-    model = simulator.SpikeSourceArray(spike_times=spike_times_off(simulator, layer, spikes_off))
+    model = simulator.SpikeSourceArray(spike_times=spike_times(simulator, layer, spikes_off))
     lgn_spikes_off_models.append(model)
 
-# LGN Popluations
+# LGN Populations
 
 lgn_on_populations = []
 lgn_off_populations = []
@@ -420,6 +417,8 @@ filename_excitation = folder + excitation + format
 filename_voltage = folder + excitation + format
 filename_orientation = folder + str(contrast) + orientation + '.npy'
 
+# ============== Save cell dynamical variables  =================
+
 if save_voltage_and_conductances:
     from neo.io import PickleIO
 
@@ -432,6 +431,7 @@ if save_voltage_and_conductances:
     io = PickleIO(filename=filename_voltage)
     cortical_neurons_exc.write_data(io, variables=['gsyn_inh'])
 
+# ============== Save orientation analysis =================
 
 if save_orientation_response:
     np.save(filename_orientation, np.vstack((orientation_space,rate)))
