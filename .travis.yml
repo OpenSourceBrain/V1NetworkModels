@@ -1,0 +1,12 @@
+language: python
+python: 2.7
+
+
+script:
+    - cd PyNN
+    #  Test helper scripts (ensures they are present & can be parsed)
+    # -  python sine_grating_plot.py
+    - python kernel_functions.py
+    
+    
+
