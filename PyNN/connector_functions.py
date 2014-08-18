@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats.stats import pearsonr
 from kernel_functions import spatial_kernel, gabor_kernel
 from misc_functions import circular_dist, normal_function
+from math import cos, sin, exp
 import cPickle
 
 ##############################################################
@@ -111,22 +112,22 @@ def gabor_probability(x, y, sigma, gamma, phi, w, theta, xc=0, yc=0):
     y = y - yc
 
     # Rotate
-    aux1 = np.cos(theta) * x + np.sin(theta) * y
-    y = -np.sin(theta) * x + np.cos(theta) * y
+    aux1 = cos(theta) * x + sin(theta) * y
+    y = -sin(theta) * x + cos(theta) * y
 
     x = aux1
 
     # Function
     r = x**2 + (gamma * y) ** 2
-    exp_part = np.exp(- r / (2 * sigma**2))
-    cos_part = np.cos(2 * np.pi * w * x + phi)
+    exp_part = exp(- r / (2 * sigma**2))
+    cos_part = cos(2 * np.pi * w * x + phi)
 
     return exp_part * cos_part
 
 
 def create_thalamocortical_connection(source, target, polarity, n_pick, g, delay, sigma, gamma, w, phases, orientations, simulator):
     """
-    Creates a conection from a layer in the thalamus to a layer in the cortex through the mechanism of gabor sampling
+    Creates a connection from a layer in the thalamus to a layer in the cortex through the mechanism of Gabor sampling
     """
 
     # Produce a list with the connections
@@ -140,17 +141,59 @@ def create_thalamocortical_connection(source, target, polarity, n_pick, g, delay
     simulator.Projection(source, target, connector, receptor_type='inhibitory')
 
 
+def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pick, g, delay,  sigma, gamma, phases,
+                           w, orientations):
+    """
+    Creates the connection from the lgn population to the cortical population with a gabor profile. It also extracts
+    the corresponding gabor parameters that are needed in order to determine the connectivity.
+    """
+
+    print 'Creating connection from ' + lgn_population.label + ' to ' + cortical_population.label
+
+    # Initialize connections
+    connections = []
+
+    for cortical_neuron in cortical_population:
+        # Set the parameters
+        x_cortical, y_cortical = cortical_neuron.position[0:2]
+        cortical_neuron_index = cortical_population.id_to_index(cortical_neuron)
+        theta = orientations[cortical_neuron_index]
+        phi = phases[cortical_neuron_index]
+
+        # Create the connections from lgn to cortical_neuron
+        #lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g, polarity, sigma,
+        #gamma, phi, w, theta, x_cortical, y_cortical)
+
+        lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g, delay, polarity, sigma,
+                                   gamma, phi, w, theta, 0, 0)
+
+    return connections
+
+
 def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, n_pick, g, delay, polarity, sigma,
                                gamma, phi, w, theta, x_cortical, y_cortical):
     """
     Creates connections from the LGN to the cortex with a Gabor profile.
 
     This function adds all the connections from the LGN to the cortical cell with index = cortical_neuron_index. It
-    requieres as parameters the cortical_neruon_index, the current list of connections, the lgn population and also
+    requires as parameters the cortical_neruon_index, the current list of connections, the lgn population and also
     the parameters of the Gabor function.
 
-     Parameters
-     ----
+    Parameters
+    ----
+    cortical_neuron_index : the neuron in the cortex -target- that we are going to connect to
+    connections: the list with the connections to which we will append the new connnections
+    lgn_neurons: the source population
+    n_pick: How many times we will sample per neuron
+    g: how strong is the connection per neuron
+    delay: the time it takes for the action potential to arrive to the target neuron from the source neuron
+    polarity: Whether we are connection from on cells (polarity = 1) or off cells (polarity = -1)
+    sigma: Controls the decay of the exponential term
+    gamma: x:y proportionality factor, elongates the pattern
+    phi: Phase of the overall pattern
+    w: Frequency of the pattern
+    theta: Rotates the whole pattern by the angle theta
+    x_cortical, y_cortical : The spatial coordinate of the cortical neuron
 
     """
 
@@ -169,37 +212,10 @@ def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, 
                 connections.append((lgn_neuron_index, cortical_neuron_index, synaptic_weight, delay))
 
 
-def create_lgn_to_cortical(lgn_population, cortical_population, polarity,  n_pick, g, delay,  sigma, gamma, phases,
-                           w, orientations):
-    """
-    Creates the connection from the lgn population to the cortical population with a gabor profile
-    """
 
-    print 'Creating connection from ' + lgn_population.label + ' to ' + cortical_population.label
-
-    # Intiliaze connection
-    connections = []
-
-    for cortical_neuron in cortical_population:
-        # Set the parameters
-        x_cortical, y_cortical = cortical_neuron.position[0:2]
-        cortical_neuron_index = cortical_population.id_to_index(cortical_neuron)
-        theta = orientations[cortical_neuron_index]
-        phi = phases[cortical_neuron_index]
-
-        # Create the connections from lgn to cortical_neuron
-        #lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g, polarity, sigma,
-        #gamma, phi, w, theta, x_cortical, y_cortical)
-        
-        lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_population, n_pick, g, delay, polarity, sigma,
-                                   gamma, phi, w, theta, 0, 0)
-
-    return connections
-
-##############################################################
-# Intra-cortical connections
-##############################################################
-
+#######################################################################
+# Intra-cortical connections phase and orientation distance version
+#######################################################################
 
 def create_cortical_to_cortical_connection(source_population, target_population, source_orientations, source_phases,
                                            target_orientations, target_phases, orientation_sigma, phase_sigma,
@@ -376,7 +392,6 @@ def cortical_to_cortical_connection_corr(target_neuron_index, connections, sourc
 
         probability = np.sum(np.random.rand(n_pick) < probability)  # Samples
         synaptic_weight = (g / n_pick) * probability
-
 
         if synaptic_weight > 0:
                     connections.append((source_neuron_index, target_neuron_index, synaptic_weight, delay))

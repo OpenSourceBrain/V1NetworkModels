@@ -12,9 +12,9 @@ from plot_functions import plot_spiketrains
 
 #############################
 
-#simulator_name = get_script_args(1)[0]
-#exec("import pyNN.%s as simulator" % simulator_name)
-import pyNN.nest as simulator
+simulator = get_script_args(1)[0]
+exec("import pyNN.%s as simulator" % simulator)
+#import pyNN.nest as simulator
 #import pyNN.neuron as simulator
 
 timer = Timer()
@@ -31,7 +31,7 @@ Nside_lgn = 30  # N_lgn x N_lgn is the size of the LGN
 Nside_exc = 40  # N_exc x N_exc is the  size of the cortical excitatory layer
 Nside_inh = 20  # N_inh x N_inh is the size of the cortical inhibitory layer
 
-factor = 1.0  # Reduction factor
+factor = 0.8  # Reduction factor
 Nside_exc = int(factor * Nside_exc)
 Nside_inh = int(factor * Nside_inh)
 
@@ -42,9 +42,9 @@ Ncell_inh = Nside_inh ** 2
 N_lgn_layers = 1
 
 ## Main connections
-thalamo_cortical_connections = True # If True create connections from the thalamus to the cortex
-feed_forward_inhibition = True # If True add feed-forward inhibition ( i -> e )
-cortical_excitatory_feedback = True # If True add cortical excitatory feedback (e -> e) and ( e -> i )
+thalamo_cortical_connections = True  # If True create connections from the thalamus to the cortex
+feed_forward_inhibition = True  # If True add feed-forward inhibition ( i -> e )
+cortical_excitatory_feedback = False  # If True add cortical excitatory feedback (e -> e) and ( e -> i )
 background_noise = True  # If True add cortical noise
 correlated_noise = False  # Makes the noise coorelated
 
@@ -102,7 +102,7 @@ w = 0.8  # Spatial frequency
 gamma = 1  # Aspect ratio
 sigma = 1  # Decay ratio
 g_exc = (4.0 / N_lgn_layers) * 0.00098  # microsiemens
-#g_exc = (4.0 / N_lgn_layers) * 0.0021  # microsiemens
+g_exc = (4.0 / N_lgn_layers) * 0.0021   # microsiemens
 n_pick = 3  # Number of times to sample
 lgn_delay = 0.1
 
