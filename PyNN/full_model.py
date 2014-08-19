@@ -31,7 +31,10 @@ Nside_lgn = 30  # N_lgn x N_lgn is the size of the LGN
 Nside_exc = 40  # N_exc x N_exc is the  size of the cortical excitatory layer
 Nside_inh = 20  # N_inh x N_inh is the size of the cortical inhibitory layer
 
-factor = 0.8  # Reduction factor
+factor = 1.0  # Reduction factor
+
+assert 0 < factor <= 1, 'factor out of (0,1] range'
+
 Nside_exc = int(factor * Nside_exc)
 Nside_inh = int(factor * Nside_inh)
 
@@ -46,7 +49,7 @@ thalamo_cortical_connections = True  # If True create connections from the thala
 feed_forward_inhibition = True  # If True add feed-forward inhibition ( i -> e )
 cortical_excitatory_feedback = False  # If True add cortical excitatory feedback (e -> e) and ( e -> i )
 background_noise = True  # If True add cortical noise
-correlated_noise = False  # Makes the noise coorelated
+correlated_noise = False  # Makes the noise correlated
 
 # Save
 save_voltage_and_conductances = False
@@ -82,7 +85,7 @@ orientation_space = np.linspace(-90, 90, 19)
 ## Assign excitatory phases and orientations
 
 phases_exc = np.random.rand(Ncell_exc) * 360 * 0  # Phases continium
-#phases_exc = np.random.choice(phases_space, Ncell_exc)  # Phases discrete
+phases_exc = np.random.choice(phases_space, Ncell_exc)  # Phases discrete
 #orientations_exc = np.random.rand(Ncell_exc) * 180  # Orientations continium
 orientations_exc = np.random.choice(orientation_space, Ncell_exc)  # Orientations discrete
 #orientations_exc = np.linspace(-60, 60, Ncell_exc)  # Orientations ordered
@@ -99,7 +102,7 @@ orientations_inh = np.random.choice(orientation_space, Ncell_inh)   # Orientatio
 ## Gabor function parameters
 
 w = 0.8  # Spatial frequency
-gamma = 1  # Aspect ratio
+gamma = 2  # Aspect ratio
 sigma = 1  # Decay ratio
 g_exc = (4.0 / N_lgn_layers) * 0.00098  # microsiemens
 g_exc = (4.0 / N_lgn_layers) * 0.0021   # microsiemens
@@ -148,7 +151,7 @@ n_pick = 10
 orientation_sigma = 10   # Grades
 phase_sigma = 10  # Grades
 g_inh = 0.00083 * (2 / factor)
-#g_inh = 0.0083  # * (2 / factor)  # Nanosiemens
+$g_inh = 0.0083 * 35 # * (2 / factor)  # Nanosiemens
 cortical_delay = 0.1
 
 #############################
@@ -166,7 +169,6 @@ positions_on, positions_off = load_positions()
 spikes_on, spikes_off = load_lgn_spikes(contrast, N_lgn_layers)
 
 # Spike functions
-
 def spike_times(simulator, layer, spikes_file):
     return [simulator.Sequence(x) for x in spikes_file[layer]]
 
@@ -316,11 +318,14 @@ if cortical_excitatory_feedback:
     cortical_exc_inh_connector = simulator.FromListConnector(cortical_exc_inh_connections, column_names=["weight", "delay"])
 
     ## Projections
-    cortical_exc_exc_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_exc,
-                                                       cortical_exc_exc_connector, receptor_type='excitatory')
+    if len(cortical_exc_exc_connections) != 0:
+        cortical_exc_exc_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_exc,
+                                                           cortical_exc_exc_connector, receptor_type='excitatory')
 
-    cortical_exc_inh_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_inh,
-                                                       cortical_exc_inh_connector, receptor_type='excitatory')
+    if len(cortical_exc_inh_connections) !=0:
+
+        cortical_exc_inh_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_inh,
+                                                           cortical_exc_inh_connector, receptor_type='excitatory')
 
 
 #############################n
@@ -371,6 +376,8 @@ if plot_conductance_analysis:
     DC, F1 = conductance_analysis(cortical_neurons_exc, segment, orientation_space, orientations_exc)
     plt.plot(orientation_space, DC, label='DC')
     plt.plot(orientation_space, DC + F1, label='DC + F1')
+    plt.xlabel('Orientation (degrees)')
+    plt.ylabel('Conductance(nS)')
     plt.legend()
     plt.show()
 

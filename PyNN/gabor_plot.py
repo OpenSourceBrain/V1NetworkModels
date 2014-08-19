@@ -5,9 +5,9 @@ from kernel_functions import gabor_kernel
 # Gabor parameters
 w = 0.8
 phi = 0
-gamma = 1  # Aspect ratio
+gamma = 2  # Aspect ratio
 sigma = 1
-theta = 0
+theta = 90
 
 # Space parameters
 dx = 0.1
@@ -15,8 +15,8 @@ lx = 6.0
 dy = 0.1
 ly = 6.0
 
-xc = 1
-yc = 1
+xc = 0
+yc = 0
 
 
 Z = gabor_kernel(lx, dx, ly, dy, sigma, gamma, phi, w, theta, xc, yc)
