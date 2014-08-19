@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt 
 
 
 def gabor_kernel(lx, dx, ly, dy, sigma, gamma, phi, w, theta, xc=0, yc=0):
