@@ -31,7 +31,7 @@ Nside_lgn = 30  # N_lgn x N_lgn is the size of the LGN
 Nside_exc = 40  # N_exc x N_exc is the  size of the cortical excitatory layer
 Nside_inh = 20  # N_inh x N_inh is the size of the cortical inhibitory layer
 
-factor = 1.0  # Reduction factor
+factor = 1  # Reduction factor
 
 assert 0 < factor <= 1, 'factor out of (0,1] range'
 
@@ -85,7 +85,7 @@ orientation_space = np.linspace(-90, 90, 19)
 ## Assign excitatory phases and orientations
 
 phases_exc = np.random.rand(Ncell_exc) * 360 * 0  # Phases continium
-phases_exc = np.random.choice(phases_space, Ncell_exc)  # Phases discrete
+#phases_exc = np.random.choice(phases_space, Ncell_exc)  # Phases discrete
 #orientations_exc = np.random.rand(Ncell_exc) * 180  # Orientations continium
 orientations_exc = np.random.choice(orientation_space, Ncell_exc)  # Orientations discrete
 #orientations_exc = np.linspace(-60, 60, Ncell_exc)  # Orientations ordered
@@ -151,7 +151,7 @@ n_pick = 10
 orientation_sigma = 10   # Grades
 phase_sigma = 10  # Grades
 g_inh = 0.00083 * (2 / factor)
-$g_inh = 0.0083 * 35 # * (2 / factor)  # Nanosiemens
+#g_inh = 0.0083 * 35 # * (2 / factor)  # Nanosiemens
 cortical_delay = 0.1
 
 #############################

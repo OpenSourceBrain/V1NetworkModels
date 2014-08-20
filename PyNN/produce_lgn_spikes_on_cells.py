@@ -49,7 +49,7 @@ K = 0.8  # Cycles per degree
 Phi = 0  # Phase of the pattern
 Theta = 0   # Orientation of the pattern
 max_contrast = 2.4 * 2
-contrast = 0.45  # Percentage
+contrast = 0.10  # Percentage
 A = contrast * max_contrast
 # Temporal frequency of sine grating
 w = 3  # Hz
