@@ -7,7 +7,7 @@ def ternary_noise(N_stimuli, Nx, Ny):
     """
     Returns ternary noise with values -1, 0 and 1 
     """
-    return  np.random.randint(-1, 2, size=(N_stimuli, Nx, Ny)) 
+    return np.random.randint(-1, 2, size=(N_stimuli, Nx, Ny))
 
 
 def sine_grating(dx, Lx, dy, Ly, A, K, phi, theta, dt_stimuli, N_stimuli, w):

@@ -5,6 +5,17 @@ from misc_functions import circular_dist, normal_function
 from math import cos, sin, exp
 import cPickle
 
+
+def normalize_connection_list(connection_list):
+    """
+    This function takes a list of tuples represnting the connections from one neuron population to another and returns
+    the same list with the connection weights (the third element of the list's tuples) normalized/averaged
+    """
+    weights = [x[2] for x in connection_list] # Make a list with the weights
+    average = sum(weights) / len(weights)  # Calculate the average of the weights
+
+    return [(x[0], x[1], average, x[3]) for x in connection_list]
+
 ##############################################################
 # LGN related functions
 ##############################################################
@@ -133,6 +144,9 @@ def create_thalamocortical_connection(source, target, polarity, n_pick, g, delay
     # Produce a list with the connections
     connections_list = create_lgn_to_cortical(source, target, polarity, n_pick, g, delay, sigma, gamma, phases, w, orientations)
 
+    # Normalize connection
+    connections_list = normalize_connection_list(connections_list)
+
     # Transform it into a connector
     connector = simulator.FromListConnector(connections_list, column_names=["weight", "delay"])
 
@@ -200,7 +214,7 @@ def lgn_to_cortical_connection(cortical_neuron_index, connections, lgn_neurons, 
     for lgn_neuron in lgn_neurons:
             # Extract position
             x, y = lgn_neuron.position[0:2]
-            # Calculate the gabbor probability
+            # Calculate the gabor probability
             probability = polarity * gabor_probability(x, y, sigma, gamma, phi, w, theta, x_cortical, y_cortical)
             probability = np.sum(np.random.rand(n_pick) < probability)  # Samples
 
@@ -305,7 +319,7 @@ def calculate_correlations_to_cell(x_position, y_position, x_values, y_values,
     # Calculate the receptive field of the cell
     Z1 = spatial_kernel(lx, dx, ly, dy, sigma_center, sigma_surround, inverse=1, x_tra=x_position, y_tra=y_position)
 
-    # Now we calclate the cross-correlation of this cell with each other cell in the gri
+    # Now we calculate the cross-correlation of this cell with each other cell in the gri
     for x_to in x_values:
         for y_to in y_values:
 

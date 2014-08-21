@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from connector_functions import load_positions, load_lgn_spikes, return_lgn_starting_coordinates
 import pyNN.space as space
 from connector_functions import create_cortical_to_cortical_connection
+from connector_functions import normalize_connection_list
 from connector_functions import create_cortical_to_cortical_connection_corr
 from connector_functions import create_thalamocortical_connection
 from analysis_functions import calculate_tuning, visualize_conductances, visualize_conductances_and_voltage
@@ -66,12 +67,6 @@ t = 1000.0
 seed = 1055
 np.random.seed(seed)
 
-dt = 1.0  # Simulation's time step
-delay_min = 1.0  # Minimum delay
-delay_max = 5.0  # Maximum delay
-
-# Has to be called at the beginning of the simulation
-simulator.setup(timestep=dt, min_delay=delay_min, max_delay=delay_max)
 
 # ============== Parameters of the thalamo-cortical connection =============
 
@@ -80,6 +75,7 @@ simulator.setup(timestep=dt, min_delay=delay_min, max_delay=delay_max)
 phases_space = np.linspace(-180, 180, 19)
 #orientation_space = np.linspace(0, 90, 10)
 orientation_space = np.linspace(-90, 90, 19)
+#orientation_space = np.linspace(0, 180, 19)
 #orientation_space = np.linspace(-60, 60, 13)
 
 ## Assign excitatory phases and orientations
@@ -144,7 +140,6 @@ v_reset_inh = -57.8  # mV
 t_refrac_inh = 1.0  # ms
 t_m_inh = C_inh / g_leak_inh  # Membrane time constant
 
-
 # ============= Cortical connections' parameters =======
 
 n_pick = 10
@@ -154,9 +149,18 @@ g_inh = 0.00083 * (2 / factor)
 #g_inh = 0.0083 * 35 # * (2 / factor)  # Nanosiemens
 cortical_delay = 0.1
 
+
+# ================= Simulation time ==================
+dt = 1.0  # Simulation's time step
+delay_min = 1.0  # Minimum delay
+delay_max = 5.0  # Maximum delay
+
 #############################
 # Build the Network
 #############################
+
+# Has to be called at the beginning of the simulation
+simulator.setup(timestep=dt, min_delay=delay_min, max_delay=delay_max)
 
 timer.start()  # start timer on construction
 
@@ -171,7 +175,6 @@ spikes_on, spikes_off = load_lgn_spikes(contrast, N_lgn_layers)
 # Spike functions
 def spike_times(simulator, layer, spikes_file):
     return [simulator.Sequence(x) for x in spikes_file[layer]]
-
 
 # Spatial structure of on LGN cells
 # On cells
@@ -235,8 +238,13 @@ inhibitory_cell = simulator.IF_cond_exp(tau_refrac=t_refrac_inh, cm=C_inh, tau_s
 # Cortical Population
 cortical_neurons_exc = simulator.Population(Ncell_exc, excitatory_cell, structure=excitatory_structure,
                                             label='Excitatory layer')
+
+cortical_neurons_exc.initialize(v=v_reset_exc)
+
 cortical_neurons_inh = simulator.Population(Ncell_inh, inhibitory_cell, structure=inhibitory_structure,
                                             label='Inhibitory layer')
+
+cortical_neurons_inh.initialize(v=v_reset_inh)
 
 # ============== Cortical background noise =====================
 
@@ -286,11 +294,14 @@ if thalamo_cortical_connections:
 ## We create inhibitory feed-forward connections ( i -> e)
 
 if feed_forward_inhibition:
-# Create list of connections
+    # Create list of connections
     cortical_inh_exc_connections = create_cortical_to_cortical_connection(cortical_neurons_inh, cortical_neurons_exc,
                                                                           orientations_inh, phases_inh, orientations_exc,
                                                                           phases_exc, orientation_sigma, phase_sigma, g_inh,
                                                                           cortical_delay, n_pick, target_type_excitatory=False)
+    # Normalize the list
+    cortical_inh_exc_connections = normalize_connection_list(cortical_inh_exc_connections)
+
     # Make the list a connector
     cortical_inh_exc_connector = simulator.FromListConnector(cortical_inh_exc_connections, column_names=["weight", "delay"])
 
@@ -303,14 +314,21 @@ if cortical_excitatory_feedback:
 
     # Create list of connectors
     cortical_exc_exc_connections = create_cortical_to_cortical_connection(cortical_neurons_exc, cortical_neurons_exc,
-                                                                          orientations_exc, phases_exc, orientations_exc,
+                                                                           orientations_exc, phases_exc, orientations_exc,
                                                                           phases_exc, orientation_sigma, phase_sigma, g_exc,
                                                                           cortical_delay, n_pick, target_type_excitatory=True)
+
+    # Normalize the list
+    cortical_exc_exc_connections = normalize_connection_list(cortical_exc_exc_connections)
 
     cortical_exc_inh_connections = create_cortical_to_cortical_connection(cortical_neurons_exc, cortical_neurons_inh,
                                                                           orientations_exc, phases_exc, orientations_inh,
                                                                           phases_inh, orientation_sigma, phase_sigma, g_exc,
                                                                           cortical_delay, n_pick, target_type_excitatory=True)
+    # Normalize the list
+    cortical_exc_inh_connections = normalize_connection_list(cortical_exc_inh_connections)
+
+
     # Make the list a connector
 
     cortical_exc_exc_connector = simulator.FromListConnector(cortical_exc_exc_connections, column_names=["weight", "delay"])
@@ -322,7 +340,7 @@ if cortical_excitatory_feedback:
         cortical_exc_exc_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_exc,
                                                            cortical_exc_exc_connector, receptor_type='excitatory')
 
-    if len(cortical_exc_inh_connections) !=0:
+    if len(cortical_exc_inh_connections) != 0:
 
         cortical_exc_inh_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_inh,
                                                            cortical_exc_inh_connector, receptor_type='excitatory')
@@ -332,7 +350,7 @@ if cortical_excitatory_feedback:
 # Recordings
 #############################
 
-cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh','v', 'spikes'])
+cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh', 'v', 'spikes'])
 cortical_neurons_inh.record(['gsyn_exc', 'gsyn_inh', 'v', 'spikes'])
 #cortical_neurons_exc.record('spikes', 'v')
 
@@ -354,7 +372,6 @@ simulator.end()
 # Extract the data
 #############################
 
-#data = cortical_neurons_exc.get_data()
 data = cortical_neurons_exc.get_data()  # Creates a Neo Block
 segment = data.segments[0]  # Takes the first segment
 

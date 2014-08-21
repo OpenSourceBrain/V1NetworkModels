@@ -7,7 +7,7 @@ w = 0.8
 phi = 0
 gamma = 2  # Aspect ratio
 sigma = 1
-theta = 90
+theta = 45
 
 # Space parameters
 dx = 0.1
