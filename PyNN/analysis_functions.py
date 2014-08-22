@@ -131,10 +131,14 @@ def visualize_conductances(segment, neurons):
 
     plt.subplot(2, 1, 1)
     plt.plot(gexc.times, gexc[:,neurons], label='exc')
+    plt.xlabel('Time (ms)')
+    plt.ylabel('Conductance (uS)')
     plt.legend()
 
     plt.subplot(2, 1, 2)
     plt.plot(ginh.times, ginh[:, neurons], label='inh')
+    plt.xlabel('Time (ms)')
+    plt.ylabel('Conductance (uS)')
     plt.legend()
 
     plt.show()

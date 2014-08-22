@@ -48,14 +48,11 @@ for x_index, x in enumerate(x_values):
             Z[x_index, y_index] = -synaptic_weight
 
 
-plt.subplot(1, 2, 2)
-plt.imshow(Z.transpose(), extent=[-lx/2, lx/2, ly/2, -ly/2])
-
-
 plt.subplot(1, 2, 1)
 Z = gabor_kernel(lx, dx, ly, dy, sigma, gamma, phi, w, theta, xc, yc)
-
 plt.imshow(Z, extent=[-lx/2, lx/2, ly/2, -ly/2])
 
+plt.subplot(1, 2, 2)
+plt.imshow(Z.transpose(), extent=[-lx/2, lx/2, ly/2, -ly/2])
 
 plt.show()
