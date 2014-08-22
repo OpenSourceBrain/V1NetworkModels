@@ -47,7 +47,7 @@ N_lgn_layers = 1
 
 ## Main connections
 thalamo_cortical_connections = True  # If True create connections from the thalamus to the cortex
-feed_forward_inhibition = False  # If True add feed-forward inhibition ( i -> e )
+feed_forward_inhibition = True  # If True add feed-forward inhibition ( i -> e )
 cortical_excitatory_feedback = False  # If True add cortical excitatory feedback (e -> e) and ( e -> i )
 background_noise = True  # If True add cortical noise
 correlated_noise = False  # Makes the noise correlated
@@ -118,8 +118,9 @@ noise_delay = 1  # ms
 
 # Common to both layers
 Vth = -52.5  # mV
+Vth = -55.0
 delay = 2.00  # ms
-Vex = 0  # mV
+Vex = 100  # mV
 Vin = -70  # mV
 t_fall_exc = 1.75  # ms
 t_fall_inh = 5.27  # ms
@@ -314,7 +315,7 @@ if cortical_excitatory_feedback:
 
     # Create list of connectors
     cortical_exc_exc_connections = create_cortical_to_cortical_connection(cortical_neurons_exc, cortical_neurons_exc,
-                                                                          orientations_exc, phases_exc, orientations_exc,
+                                                                           orientations_exc, phases_exc, orientations_exc,
                                                                           phases_exc, orientation_sigma, phase_sigma, g_exc,
                                                                           cortical_delay, n_pick, target_type_excitatory=True)
 
@@ -340,19 +341,18 @@ if cortical_excitatory_feedback:
         cortical_exc_exc_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_exc,
                                                            cortical_exc_exc_connector, receptor_type='excitatory')
 
-    if len(cortical_exc_inh_connections) !=0:
+    if len(cortical_exc_inh_connections) != 0:
 
         cortical_exc_inh_projection = simulator.Projection(cortical_neurons_exc, cortical_neurons_inh,
                                                            cortical_exc_inh_connector, receptor_type='excitatory')
+
 
 
 #############################n
 # Recordings
 #############################
 
-cortical_neurons_exc.record(['gsyn_exc', 'gsyn_inh','v', 'spikes'])
-cortical_neurons_inh.record(['gsyn_exc', 'gsyn_inh', 'v', 'spikes'])
-#cortical_neurons_exc.record('spikes', 'v')
+cortical_neurons_exc.record(['v', 'spikes'])
 
 # read out time used for building
 build_time = timer.elapsedTime()
@@ -375,28 +375,31 @@ simulator.end()
 #data = cortical_neurons_exc.get_data()
 data = cortical_neurons_exc.get_data()  # Creates a Neo Block
 segment = data.segments[0]  # Takes the first segment
-g_exc = segment.analogsignalarrays[0]
-g_inh = segment.analogsignalarrays[1]
+v = segment.analogsignalarrays[0]
 
 #############################
 # Do the analysis
 #############################
 
+# ============== Voltage traces =================
 
-#neuron = np.where(orientations_exc == 0)[0][0]
-neuron = orientations_exc == 0
+orientations_to_analyze = np.linspace(0, 80, 9)
+neurons = np.zeros(orientations_to_analyze.size)
 
-#neuron_null = np.where(orientations_exc == 90)[0][0]
-neuron_null = orientations_exc == 90
+for index, orientation in enumerate(orientations_to_analyze):
+    aux = np.where(orientations_exc == orientation)[0][0]
+    neurons[index] = aux
 
-#plt.plot(g_exc.times, g_exc[:, neuron], label='Preferred')
-plt.plot(g_exc.times, np.mean(g_exc[:, neuron], axis=1), label='Preferred')
-#plt.plot(g_exc.times, g_exc[:, neuron_null], label='Null')
-plt.plot(g_exc.times, np.mean(g_exc[:, neuron_null], axis=1), label='Null')
-plt.xlabel('Time (ms)')
-plt.ylabel('Conductance (uS)')
-plt.legend()
+neurons = neurons.astype('int')
 
+for index, neuron in enumerate(neurons):
 
+    plt.subplot(3, 3, index + 1)
+    plt.plot(v.times, v[:, neuron], label='theta=' + str(orientations_to_analyze[index]))
+    plt.xlabel('Time (ms)')
+    plt.ylabel('Voltage (mV)')
+    plt.ylim([-70, -50])
+    plt.legend()
+
+print 'Vth', Vth
 plt.show()
-
